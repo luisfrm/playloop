@@ -6,14 +6,20 @@
     "build": "turbo build",
     "dev": "turbo dev",
     "format": "turbo format",
+    "lint": "eslint .",
     "test": "turbo test",
     "typecheck": "turbo typecheck"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.11.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.12.0",
     "prettier": "^3.8.3",
     "prettier-plugin-tailwindcss": "^0.8.0",
     "turbo": "^2.9.18",
-    "typescript": "^6"
+    "typescript": "^6",
+    "typescript-eslint": "^8.70.1"
   },
   "packageManager": "pnpm@10.33.4",
   "engines": {

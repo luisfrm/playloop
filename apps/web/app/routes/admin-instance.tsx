@@ -4,14 +4,13 @@ import { Input } from "@playloop/ui/components/input"
 import {
   describeObject,
   gameTypes,
-  parseDictionaryText,
-  themeSchema,
   type ObjectDescriptor,
 } from "@playloop/game-engine"
 import { useState } from "react"
 import { Form, Link, data, useLoaderData, useNavigation } from "react-router"
 
 import { requireAdmin } from "@/lib/admin-auth.server"
+import { saveInstanceIntent } from "@/lib/admin-instance-save.server"
 import { DictionaryImport } from "@/components/dictionary-import"
 import { MediaUpload } from "@/components/media-upload"
 import { SchemaForm } from "@/components/schema-form"
@@ -93,75 +92,12 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   if (!instance)
     throw data({ message: "Ese juego no existe." }, { status: 404 })
 
-  const definition = gameTypes.require(instance.gameTypeKey)
-  const intent = String(form.get("intent") ?? "")
-
-  if (intent === "settings") {
-    const settingsResult = definition.settingsSchema.safeParse(
-      JSON.parse(String(form.get("settingsJson") ?? "{}"))
-    )
-    if (!settingsResult.success) {
-      return data({ error: "La configuración no es válida." }, { status: 400 })
-    }
-
-    await repository.saveInstance({
-      ...instance,
-      title: String(form.get("title") ?? instance.title),
-      description: String(form.get("description") ?? ""),
-      published: form.get("published") === "on",
-      expertModeEnabled: form.get("expertModeEnabled") === "on",
-      theme: themeSchema.parse({
-        ...instance.theme,
-        name: String(form.get("themeName") ?? instance.theme.name),
-      }),
-      settings: settingsResult.data,
-      updatedAt: Date.now(),
-    })
-    return { ok: true, message: "Configuración guardada." }
-  }
-
-  if (intent === "content") {
-    let payloads: unknown[]
-    try {
-      payloads = JSON.parse(
-        String(form.get("contentJson") ?? "[]")
-      ) as unknown[]
-    } catch {
-      return data(
-        { error: "El contenido enviado no es válido." },
-        { status: 400 }
-      )
-    }
-
-    const validated = definition.contentSchema.array().safeParse(payloads)
-    if (!validated.success) {
-      return data(
-        { error: "Hay elementos con datos inválidos." },
-        { status: 400 }
-      )
-    }
-
-    const saved = await repository.replaceContent(instance.id, validated.data)
-    return { ok: true, message: `${saved.length} elementos guardados.` }
-  }
-
-  if (intent === "dictionary") {
-    const entries = parseDictionaryText(
-      String(form.get("dictionaryText") ?? "")
-    )
-    const saved = await repository.replaceDictionary(instance.id, entries)
-
-    if (instance.expertModeEnabled && saved.length === 0) {
-      await repository.saveInstance({
-        ...instance,
-        expertModeEnabled: false,
-        updatedAt: Date.now(),
-      })
-    }
-    return { ok: true, message: `${saved.length} entradas en el diccionario.` }
-  }
-
-  return data({ error: "Acción desconocida." }, { status: 400 })
+  return saveInstanceIntent({
+    form,
+    repository,
+    instance,
+    definition: gameTypes.require(instance.gameTypeKey),
+  })
 }
 
 export default function AdminInstance() {
@@ -192,7 +128,7 @@ export default function AdminInstance() {
             </h1>
             <Badge accent="lavender">{loaderData.instance.gameTypeKey}</Badge>
           </div>
-          <p className="mt-1 font-label text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
+          <p className="font-label mt-1 text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
             /juego/{loaderData.instance.slug}
           </p>
         </div>
@@ -358,7 +294,9 @@ export default function AdminInstance() {
                     onUploaded={(url) =>
                       setContent((items) =>
                         items.map((current, i) =>
-                          i === index ? { ...current, [mediaField]: url } : current
+                          i === index
+                            ? { ...current, [mediaField]: url }
+                            : current
                         )
                       )
                     }

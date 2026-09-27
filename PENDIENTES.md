@@ -1,8 +1,8 @@
 # Pendientes
 
 Lista de lo que falta por completar. Revisada el 2026-09-27 con
-`pnpm typecheck` (ok), `pnpm test` (210 pasos) y
-`pnpm --filter web test:e2e` (20 pasos, 0 fallos).
+`pnpm typecheck` (ok), `pnpm lint` (0 errores), `pnpm test` (217 pasos) y
+`pnpm --filter web test:e2e` (22 pasos, 0 fallos).
 
 ## Bug de producto
 
@@ -45,8 +45,12 @@ Lista de lo que falta por completar. Revisada el 2026-09-27 con
 
 ## Especificación (`INITIAL_PROMPT_IMPROVED.md`)
 
-- [ ] **6. §14 — ESLint.** No existe ni script `lint`; falta la regla
-  `complexity` máximo 15 por función.
+- [x] **6. §14 — ESLint.** Nuevo `eslint.config.mjs` (flat, raíz) con
+  `typescript-eslint` sin reglas con tipos, `eslint-config-prettier` y
+  `complexity` máximo 15 por función; vetado `react-icons`. Script raíz
+  `pnpm lint`. Para cumplirla se partieron `api-play` y `admin-instance`
+  (handlers en `app/lib/admin-instance-save.server.ts`) y `play`/`sala`
+  (subcomponentes `PlayStage`/`FeedbackStage`, `RoomNotice`/`RoomSection`).
 - [x] **7. §13 — Popup de nombre en el Home.** Si no hay nombre en cache el
   Home abre un diálogo como primer elemento visible, que se cierra con
   Escape, con la X o con el fondo y vuelve a aparecer en la próxima visita

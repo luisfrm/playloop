@@ -16,11 +16,13 @@ Motor de juegos genérico multi-tema. La especificación de producto es
 | Tests e2e (Playwright) | `pnpm --filter web test:e2e` |
 | Typecheck | `pnpm typecheck` |
 | Formatear | `pnpm format` |
+| Lint | `pnpm lint` |
 
 - `pnpm format` es **Prettier** (raíz `.prettierrc`): sin `;`, comillas dobles,
   plugin `prettier-plugin-tailwindcss` (ordena las clases Tailwind).
-- **No existe `lint`/ESLint todavía.** Si añades uno, la spec pide
-  `complexity` máximo 15 por función.
+- **`pnpm lint` es ESLint** (flat config `eslint.config.mjs`, raíz):
+  `typescript-eslint` sin reglas con tipos, `eslint-config-prettier` y
+  `complexity` máximo 15 por función (§14); vetado `react-icons`.
 
 ---
 

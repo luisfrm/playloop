@@ -381,7 +381,7 @@ export async function expireRound(input: {
       "true_false"
   ) as AnyDefinition
 
-  const { prompt, options } = await loadRoundParts(repository, session)
+  const { prompt } = await loadRoundParts(repository, session)
   const settings = session.settings as BaseSettings
   const now = Date.now()
   const outcome = expireQuestion(session.state, settings, now)

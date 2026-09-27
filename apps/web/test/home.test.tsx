@@ -74,12 +74,9 @@ describe("Home", () => {
     localStorage.clear()
 
     const { container } = renderHome(games)
-    await screen.findByRole("heading", { level: 1 })
+    const popup = await screen.findByRole("dialog")
 
     const root = container.firstElementChild as HTMLElement
-    expect(root.firstElementChild).toHaveAttribute(
-      "data-slot",
-      "player-name-popup"
-    )
+    expect(root.firstElementChild).toContainElement(popup)
   })
 })

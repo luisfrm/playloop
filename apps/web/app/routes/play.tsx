@@ -191,86 +191,156 @@ export default function Play() {
   return (
     <div className="flex min-h-svh flex-col">
       <TopNav />
-      <main className="mx-auto w-full max-w-[64rem] flex-1 px-[clamp(1rem,4vw,1.5rem)] py-10">
-        <header className="flex flex-col gap-2 border-b pb-6">
-          <h1 className="min-w-0 font-heading text-3xl font-bold tracking-[-0.025em] [overflow-wrap:anywhere]">
-            {loaderData.title}
-          </h1>
-          <p className="max-w-[52ch] text-sm text-muted-foreground">
-            {loaderData.description}
-          </p>
-          <div className="flex flex-wrap gap-2 pt-1">
-            <Badge accent="pear">{loaderData.contentSize} elementos</Badge>
-            {loaderData.expertModeEnabled && loaderData.dictionarySize > 0 ? (
-              <Badge accent="cyan">Modo experto disponible</Badge>
-            ) : null}
-          </div>
-        </header>
-
-        {error ? (
-          <p
-            role="alert"
-            className="mt-6 rounded-[var(--radius-md)] border border-destructive/40 bg-destructive/10 p-3 text-sm"
-          >
-            {error}
-          </p>
-        ) : null}
-
-        <section className="pt-8">
-          {phase === "idle" ? (
-            <StartPanel
-              slug={loaderData.slug}
-              canPlay={loaderData.canPlay}
-              expertAvailable={
-                loaderData.expertModeEnabled && loaderData.dictionarySize > 0
-              }
-              mode={mode}
-              onModeChange={setMode}
-              onStart={start}
-              busy={busy}
-              offline={offline}
-              onDownload={downloadForOffline}
-              coopAvailable={loaderData.coopAvailable}
-              coop={coop}
-              onStartCoop={startCoop}
-            />
-          ) : null}
-
-          {phase === "playing" && view ? (
-            <RoundPanel
-              view={view}
-              busy={busy}
-              onAnswer={answer}
-              onExpire={expire}
-            />
-          ) : null}
-
-          {(phase === "feedback" || phase === "finished") && view ? (
-            <FeedbackPanel
-              stats={result?.stats ?? view.stats}
-              correct={result?.correct ?? false}
-              revealedLabel={result?.revealed.label ?? ""}
-              finished={phase === "finished"}
-              busy={busy}
-              rankingHref={`/ranking/${loaderData.slug}`}
-              onContinue={() => {
-                if (result?.next) {
-                  setView(result.next)
-                  setResult(null)
-                  setPhase("playing")
-                }
-              }}
-              onRestart={() => {
-                setView(null)
-                setResult(null)
-                setPhase("idle")
-              }}
-            />
-          ) : null}
-        </section>
-      </main>
+      <PlayStage
+        loaderData={loaderData}
+        phase={phase}
+        view={view}
+        result={result}
+        error={error}
+        busy={busy}
+        mode={mode}
+        offline={offline}
+        coop={coop}
+        onModeChange={setMode}
+        onStart={start}
+        onAnswer={answer}
+        onExpire={expire}
+        onDownload={downloadForOffline}
+        onStartCoop={startCoop}
+        onContinue={() => {
+          if (result?.next) {
+            setView(result.next)
+            setResult(null)
+            setPhase("playing")
+          }
+        }}
+        onRestart={() => {
+          setView(null)
+          setResult(null)
+          setPhase("idle")
+        }}
+      />
       <SiteFooter />
     </div>
+  )
+}
+
+type PlayLoaderData = Awaited<ReturnType<typeof loader>>
+
+/** Everything the screen shows once the player is in: header, notices, stage. */
+function PlayStage(props: {
+  loaderData: PlayLoaderData
+  phase: Phase
+  view: PlayView | null
+  result: AnswerResponse | null
+  error: string | null
+  busy: boolean
+  mode: "classic" | "expert"
+  offline: "idle" | "saving" | "saved" | "error"
+  coop: "idle" | "creating"
+  onModeChange: (mode: "classic" | "expert") => void
+  onStart: () => void
+  onAnswer: (answerId: string) => void
+  onExpire: () => void
+  onDownload: () => void
+  onStartCoop: () => void
+  onContinue: () => void
+  onRestart: () => void
+}) {
+  const expertAvailable =
+    props.loaderData.expertModeEnabled && props.loaderData.dictionarySize > 0
+
+  return (
+    <main className="mx-auto w-full max-w-[64rem] flex-1 px-[clamp(1rem,4vw,1.5rem)] py-10">
+      <header className="flex flex-col gap-2 border-b pb-6">
+        <h1 className="min-w-0 font-heading text-3xl font-bold tracking-[-0.025em] [overflow-wrap:anywhere]">
+          {props.loaderData.title}
+        </h1>
+        <p className="max-w-[52ch] text-sm text-muted-foreground">
+          {props.loaderData.description}
+        </p>
+        <div className="flex flex-wrap gap-2 pt-1">
+          <Badge accent="pear">{props.loaderData.contentSize} elementos</Badge>
+          {expertAvailable ? (
+            <Badge accent="cyan">Modo experto disponible</Badge>
+          ) : null}
+        </div>
+      </header>
+
+      {props.error ? (
+        <p
+          role="alert"
+          className="mt-6 rounded-[var(--radius-md)] border border-destructive/40 bg-destructive/10 p-3 text-sm"
+        >
+          {props.error}
+        </p>
+      ) : null}
+
+      <section className="pt-8">
+        {props.phase === "idle" ? (
+          <StartPanel
+            slug={props.loaderData.slug}
+            canPlay={props.loaderData.canPlay}
+            expertAvailable={expertAvailable}
+            mode={props.mode}
+            onModeChange={props.onModeChange}
+            onStart={props.onStart}
+            busy={props.busy}
+            offline={props.offline}
+            onDownload={props.onDownload}
+            coopAvailable={props.loaderData.coopAvailable}
+            coop={props.coop}
+            onStartCoop={props.onStartCoop}
+          />
+        ) : null}
+
+        {props.phase === "playing" && props.view ? (
+          <RoundPanel
+            view={props.view}
+            busy={props.busy}
+            onAnswer={props.onAnswer}
+            onExpire={props.onExpire}
+          />
+        ) : null}
+
+        {(props.phase === "feedback" || props.phase === "finished") &&
+        props.view ? (
+          <FeedbackStage
+            view={props.view}
+            result={props.result}
+            finished={props.phase === "finished"}
+            busy={props.busy}
+            rankingHref={`/ranking/${props.loaderData.slug}`}
+            onContinue={props.onContinue}
+            onRestart={props.onRestart}
+          />
+        ) : null}
+      </section>
+    </main>
+  )
+}
+
+/** Reads the answer feedback defensively: the payload is optional mid-round. */
+function FeedbackStage(props: {
+  view: PlayView
+  result: AnswerResponse | null
+  finished: boolean
+  busy: boolean
+  rankingHref: string
+  onContinue: () => void
+  onRestart: () => void
+}) {
+  return (
+    <FeedbackPanel
+      stats={props.result?.stats ?? props.view.stats}
+      correct={props.result?.correct ?? false}
+      revealedLabel={props.result?.revealed.label ?? ""}
+      finished={props.finished}
+      busy={props.busy}
+      rankingHref={props.rankingHref}
+      onContinue={props.onContinue}
+      onRestart={props.onRestart}
+    />
   )
 }
 
@@ -382,11 +452,13 @@ function StartPanel(props: {
             disabled={props.coop === "creating"}
             onClick={props.onStartCoop}
           >
-            {props.coop === "creating" ? "Creando la sala…" : "Jugar con amigos"}
+            {props.coop === "creating"
+              ? "Creando la sala…"
+              : "Jugar con amigos"}
           </Button>
           <p className="text-xs text-muted-foreground">
-            Crea una sala y comparte el código. Todos responden la misma pregunta
-            a la vez.
+            Crea una sala y comparte el código. Todos responden la misma
+            pregunta a la vez.
           </p>
         </div>
       ) : null}

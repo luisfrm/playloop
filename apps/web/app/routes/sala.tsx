@@ -119,7 +119,9 @@ export default function Sala() {
             <h1 className="min-w-0 font-heading text-3xl font-bold tracking-[-0.025em] [overflow-wrap:anywhere]">
               Sala {code}
             </h1>
-            {room ? <Badge accent="cyan">{PHASE_LABELS[room.phase]}</Badge> : null}
+            {room ? (
+              <Badge accent="cyan">{PHASE_LABELS[room.phase]}</Badge>
+            ) : null}
           </div>
           <p className="max-w-[60ch] text-sm text-muted-foreground">
             Todos responden la misma pregunta a la vez y cada acierto suma un
@@ -127,57 +129,17 @@ export default function Sala() {
           </p>
         </header>
 
-        {error ? (
-          <p
-            role="alert"
-            className="rounded-[var(--radius-md)] border border-destructive/40 bg-destructive/10 p-3 text-sm"
-          >
-            {error}
-          </p>
-        ) : null}
-
-        {!player ? (
-          <div className="rounded-[var(--radius-lg)] border bg-card p-6">
-            <PlayerNameForm />
-          </div>
-        ) : null}
-
-        {player && !joined ? (
-          <p role="status" aria-live="polite" className="text-sm text-muted-foreground">
-            Entrando en la sala…
-          </p>
-        ) : null}
-
-        {joined && room?.phase === "lobby" ? (
-          <Lobby
-            room={room}
-            playerId={playerId}
-            pending={pending}
-            onStart={() => void act(() => startRoom(code, playerId))}
-          />
-        ) : null}
-
-        {joined && room?.phase === "playing" && room.question ? (
-          <QuestionPanel
-            room={room}
-            question={room.question}
-            remaining={remaining}
-            playerId={playerId}
-            pending={pending}
-            onAnswer={(optionId) =>
-              void act(() => answerRoom(code, playerId, optionId))
-            }
-          />
-        ) : null}
-
-        {joined && room?.phase === "finished" ? (
-          <Results
-            standings={standings}
-            gameSlug={room.gameSlug}
-            pending={pending}
-            onLeave={() => void act(() => leaveRoom(code, playerId))}
-          />
-        ) : null}
+        <RoomNotice error={error} hasPlayer={Boolean(player)} joined={joined} />
+        <RoomSection
+          room={room}
+          joined={joined}
+          playerId={playerId}
+          pending={pending}
+          code={code}
+          remaining={remaining}
+          standings={standings}
+          act={act}
+        />
       </main>
       <SiteFooter />
     </div>
@@ -222,8 +184,9 @@ function Lobby(props: {
           {props.room.members.length} en la sala
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Comparte el código <strong className="text-foreground">{props.room.code}</strong>{" "}
-          para que entren.
+          Comparte el código{" "}
+          <strong className="text-foreground">{props.room.code}</strong> para
+          que entren.
         </p>
       </div>
 
@@ -239,7 +202,11 @@ function Lobby(props: {
           {props.pending ? "Empezando…" : "Empezar la partida"}
         </Button>
       ) : (
-        <p role="status" aria-live="polite" className="text-sm text-muted-foreground">
+        <p
+          role="status"
+          aria-live="polite"
+          className="text-sm text-muted-foreground"
+        >
           Esperando a que quien creó la sala empiece la partida.
         </p>
       )}
@@ -261,7 +228,7 @@ function QuestionPanel(props: {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <dl className="flex flex-wrap gap-5 font-label text-[11px] tracking-[0.08em] uppercase">
+        <dl className="font-label flex flex-wrap gap-5 text-[11px] tracking-[0.08em] uppercase">
           <Stat label="Pregunta" value={props.room.questionCount} />
           <Stat label="Han respondido" value={question.answeredBy.length} />
         </dl>
@@ -302,7 +269,11 @@ function QuestionPanel(props: {
         ))}
       </ul>
 
-      <p role="status" aria-live="polite" className="text-xs text-muted-foreground">
+      <p
+        role="status"
+        aria-live="polite"
+        className="text-xs text-muted-foreground"
+      >
         {answered
           ? "Respuesta enviada. Espera a los demás o al final del tiempo."
           : "Elige una opción. Cuando acabe el tiempo la sala pasa sola."}
@@ -348,4 +319,97 @@ function Results(props: {
       </div>
     </div>
   )
+}
+
+function RoomNotice(props: {
+  error: string | null
+  hasPlayer: boolean
+  joined: boolean
+}) {
+  return (
+    <>
+      {props.error ? (
+        <p
+          role="alert"
+          className="rounded-[var(--radius-md)] border border-destructive/40 bg-destructive/10 p-3 text-sm"
+        >
+          {props.error}
+        </p>
+      ) : null}
+
+      {!props.hasPlayer ? (
+        <div className="rounded-[var(--radius-lg)] border bg-card p-6">
+          <PlayerNameForm />
+        </div>
+      ) : null}
+
+      {props.hasPlayer && !props.joined ? (
+        <p
+          role="status"
+          aria-live="polite"
+          className="text-sm text-muted-foreground"
+        >
+          Entrando en la sala…
+        </p>
+      ) : null}
+    </>
+  )
+}
+
+/** The lobby, question and results views, picked from the authoritative phase. */
+function RoomSection(props: {
+  room: RoomPublicState | null
+  joined: boolean
+  playerId: string
+  pending: boolean
+  code: string
+  remaining: number | null
+  standings: RoomPublicState["members"]
+  act: (run: () => Promise<RoomResponse>) => Promise<void>
+}) {
+  const room = props.room
+  if (!props.joined || !room) return null
+
+  if (room.phase === "lobby") {
+    return (
+      <Lobby
+        room={room}
+        playerId={props.playerId}
+        pending={props.pending}
+        onStart={() =>
+          void props.act(() => startRoom(props.code, props.playerId))
+        }
+      />
+    )
+  }
+
+  if (room.phase === "playing" && room.question) {
+    return (
+      <QuestionPanel
+        room={room}
+        question={room.question}
+        remaining={props.remaining}
+        playerId={props.playerId}
+        pending={props.pending}
+        onAnswer={(optionId) =>
+          void props.act(() => answerRoom(props.code, props.playerId, optionId))
+        }
+      />
+    )
+  }
+
+  if (room.phase === "finished") {
+    return (
+      <Results
+        standings={props.standings}
+        gameSlug={room.gameSlug}
+        pending={props.pending}
+        onLeave={() =>
+          void props.act(() => leaveRoom(props.code, props.playerId))
+        }
+      />
+    )
+  }
+
+  return null
 }

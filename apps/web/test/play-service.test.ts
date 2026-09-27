@@ -3,7 +3,6 @@ import type { GameInstance } from "@playloop/game-engine"
 import { describe, expect, it } from "vitest"
 
 import {
-  PlayError,
   answerRound,
   recordScore,
   startSession,
