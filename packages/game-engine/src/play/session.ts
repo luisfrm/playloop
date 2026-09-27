@@ -145,11 +145,16 @@ export function submitAnswer(
   }
 }
 
-/** The selection timer fired: the question is lost without an answer. */
+/**
+ * The selection timer fired: the question is lost without an answer.
+ *
+ * The signature mirrors `submitAnswer` so both transitions are called the same
+ * way; expiring only depends on the state, so the last two are ignored.
+ */
 export function expireQuestion(
   state: SessionState,
-  settings: BaseSettings,
-  now: number
+  _settings: BaseSettings,
+  _now: number
 ): AnswerOutcome {
   if (isFinished(state.status)) {
     return { state, correct: false, rejectedReason: "session_finished" }
