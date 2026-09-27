@@ -36,11 +36,18 @@ test("a player answers rounds and ends up in the ranking", async ({ page }) => {
   await page.getByRole("button", { name: "Siguiente" }).click()
 
   // Keep losing until the lives run out, which is what finishes the game.
-  const wrong = ITEMS.find((entry) => entry.label !== correct)!.label
   const ranking = page.getByRole("link", { name: "Ver ranking" })
 
   for (let round = 0; round < 6 && !(await ranking.isVisible()); round += 1) {
-    await page.getByRole("button", { name: wrong, exact: true }).click()
+    // The prompt changes every round and a round only offers the items not
+    // asked yet, so the wrong answer is picked from what is on screen.
+    const correctNow = await correctLabelFor(page, ITEMS)
+    await page
+      .locator("main")
+      .getByRole("button")
+      .filter({ hasNotText: correctNow })
+      .first()
+      .click()
     await expect(page.getByText("Fallaste", { exact: true })).toBeVisible()
 
     const next = page.getByRole("button", { name: "Siguiente" })
@@ -103,6 +110,8 @@ test("the expert mode offers the dictionary instead of options", async ({
   ).toBeVisible()
 
   const correct = await correctLabelFor(page, ITEMS)
-  await page.getByRole("button", { name: correct, exact: true }).click()
+  // The dictionary offers the answer as listbox options, not as the classic
+  // answer buttons, so the role is what tells the two panels apart.
+  await page.getByRole("option", { name: correct, exact: true }).click()
   await expect(page.getByText("Correcto", { exact: true })).toBeVisible()
 })
