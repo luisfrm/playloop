@@ -152,7 +152,9 @@ describe("answerPractice", () => {
     const label = view?.options.find(
       (option) => option.id === state.promptId
     )?.label
-    const entry = state.dictionary.find((candidate) => candidate.value === label)
+    const entry = state.dictionary.find(
+      (candidate) => candidate.value === label
+    )
 
     expect(entry).toBeDefined()
     expect(answerPractice(state, entry?.id ?? "", 2_000).correct).toBe(true)

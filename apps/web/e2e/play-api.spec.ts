@@ -19,7 +19,12 @@ test("the play endpoint refuses what it should", async ({ page, request }) => {
   expect(missingPlayer.status()).toBe(400)
 
   const shortName = await request.post("/api/play", {
-    data: { action: "start", slug: "api-e2e", playerId: "p-1", playerName: "a" },
+    data: {
+      action: "start",
+      slug: "api-e2e",
+      playerId: "p-1",
+      playerName: "a",
+    },
   })
   expect(shortName.status()).toBe(400)
   await expect(shortName.json()).resolves.toEqual({
@@ -78,9 +83,16 @@ test("a blocked name never starts a game", async ({ page, request }) => {
   expect(allowed.status()).toBe(200)
 })
 
-test("a session belongs to exactly one player id", async ({ page, request }) => {
+test("a session belongs to exactly one player id", async ({
+  page,
+  request,
+}) => {
   await loginAsOperator(page)
-  await publishGame(page, { title: "Sesión e2e", slug: "sesion-e2e", items: ITEMS })
+  await publishGame(page, {
+    title: "Sesión e2e",
+    slug: "sesion-e2e",
+    items: ITEMS,
+  })
 
   const started = await request.post("/api/play", {
     data: {
@@ -122,7 +134,10 @@ test("a session belongs to exactly one player id", async ({ page, request }) => 
   expect(owner.status()).toBe(200)
 })
 
-test("the session payload never carries the answer", async ({ page, request }) => {
+test("the session payload never carries the answer", async ({
+  page,
+  request,
+}) => {
   await loginAsOperator(page)
   await publishGame(page, { title: "Fuga e2e", slug: "fuga-e2e", items: ITEMS })
 

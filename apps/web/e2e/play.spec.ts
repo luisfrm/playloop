@@ -58,7 +58,9 @@ test("a player answers rounds and ends up in the ranking", async ({ page }) => {
   await ranking.click()
 
   await expect(page).toHaveURL(/\/ranking\/partida-e2e$/)
-  await expect(page.getByRole("listitem").filter({ hasText: "Ana" })).toBeVisible()
+  await expect(
+    page.getByRole("listitem").filter({ hasText: "Ana" })
+  ).toBeVisible()
 })
 
 test("an unfinished game never reached the ranking", async ({ page }) => {

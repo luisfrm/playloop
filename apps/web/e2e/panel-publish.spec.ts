@@ -35,7 +35,9 @@ test("a published game shows up in the catalogue and a draft does not", async ({
   })
 
   await page.goto("/")
-  await expect(page.getByRole("link", { name: /Visible en el catálogo/ })).toBeVisible()
+  await expect(
+    page.getByRole("link", { name: /Visible en el catálogo/ })
+  ).toBeVisible()
 
   // A second game, left as a draft.
   await page.goto("/admin/nuevo")
@@ -45,7 +47,9 @@ test("a published game shows up in the catalogue and a draft does not", async ({
   await expect(page).toHaveURL(/\/admin\/juego\/[0-9a-f-]+$/)
 
   await page.goto("/")
-  await expect(page.getByRole("link", { name: /Todavía borrador/ })).toHaveCount(0)
+  await expect(
+    page.getByRole("link", { name: /Todavía borrador/ })
+  ).toHaveCount(0)
   await page.goto("/juego/todavia-borrador")
   await expect(page.getByText("Ese juego no existe")).toBeVisible()
 })
@@ -62,13 +66,11 @@ test("the dictionary can be loaded from a file and then saved", async ({
   await expect(page).toHaveURL(/\/admin\/juego\/[0-9a-f-]+$/)
   const instancePath = new URL(page.url()).pathname
 
-  await page
-    .getByLabel("Importar diccionario desde un archivo")
-    .setInputFiles({
-      name: "diccionario.csv",
-      mimeType: "text/csv",
-      buffer: Buffer.from("Alfa | A\nBravo | B"),
-    })
+  await page.getByLabel("Importar diccionario desde un archivo").setInputFiles({
+    name: "diccionario.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from("Alfa | A\nBravo | B"),
+  })
 
   const textarea = page.locator('textarea[name="dictionaryText"]')
   await expect(textarea).toHaveValue("Alfa | A\nBravo | B")

@@ -17,7 +17,10 @@ import {
 
 const devConfig = adminConfigFromEnv({})
 
-function requestWithCookie(value: string | null, url = "http://localhost/admin") {
+function requestWithCookie(
+  value: string | null,
+  url = "http://localhost/admin"
+) {
   const headers = new Headers()
   if (value) headers.set("Cookie", `${ADMIN_COOKIE}=${value}`)
   return new Request(url, { headers })
@@ -109,9 +112,9 @@ describe("admin session token", () => {
     await expect(verifyAdminToken(devConfig, "v2.99999999999.x")).resolves.toBe(
       false
     )
-    await expect(verifyAdminToken(devConfig, "v1.no-numero.firma")).resolves.toBe(
-      false
-    )
+    await expect(
+      verifyAdminToken(devConfig, "v1.no-numero.firma")
+    ).resolves.toBe(false)
   })
 })
 

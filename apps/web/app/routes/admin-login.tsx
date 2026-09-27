@@ -36,7 +36,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const config = adminConfigFromEnv(getEnv(context))
 
   if (await isAdmin(context, request)) {
-    throw redirect(safeRedirectTo(new URL(request.url).searchParams.get("redirectTo")))
+    throw redirect(
+      safeRedirectTo(new URL(request.url).searchParams.get("redirectTo"))
+    )
   }
 
   return { usingDevDefaults: config.usingDevDefaults }
@@ -59,7 +61,10 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   return redirect(safeRedirectTo(String(form.get("redirectTo") ?? "")), {
     headers: {
-      "Set-Cookie": adminCookieForRequest(await createAdminToken(config), request),
+      "Set-Cookie": adminCookieForRequest(
+        await createAdminToken(config),
+        request
+      ),
     },
   })
 }

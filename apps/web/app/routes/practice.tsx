@@ -67,7 +67,10 @@ export default function Practice() {
 
   const apply = useCallback((outcome: PracticeAnswer) => {
     setState(outcome.state)
-    setResult({ correct: outcome.correct, revealedLabel: outcome.revealedLabel })
+    setResult({
+      correct: outcome.correct,
+      revealedLabel: outcome.revealedLabel,
+    })
     setPhase(outcome.state.finished ? "finished" : "feedback")
   }, [])
 

@@ -12,7 +12,10 @@ describe("ensureGameTypes", () => {
     const mirrored = (await repository.listGameTypes())
       .map((type) => type.key)
       .sort()
-    const registered = gameTypes.list().map((type) => type.key).sort()
+    const registered = gameTypes
+      .list()
+      .map((type) => type.key)
+      .sort()
 
     expect(registered.length).toBeGreaterThan(0)
     expect(mirrored).toEqual(registered)

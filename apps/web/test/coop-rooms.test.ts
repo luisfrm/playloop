@@ -31,12 +31,18 @@ const seeded = () => 0.15
 
 describe("buildRoomRounds", () => {
   it("freezes the requested number of rounds up front", async () => {
-    const { rounds } = buildRoomRounds({ ...(await fixture(3)), random: seeded })
+    const { rounds } = buildRoomRounds({
+      ...(await fixture(3)),
+      random: seeded,
+    })
     expect(rounds).toHaveLength(3)
   })
 
   it("gives every round at least two options and an answer among them", async () => {
-    const { rounds } = buildRoomRounds({ ...(await fixture(4)), random: seeded })
+    const { rounds } = buildRoomRounds({
+      ...(await fixture(4)),
+      random: seeded,
+    })
 
     for (const round of rounds) {
       expect(round.optionIds.length).toBeGreaterThanOrEqual(2)
@@ -66,7 +72,10 @@ describe("buildRoomRounds", () => {
     // media matches the prompt is the answer. That is what `resolveAnswer` says
     // too — this asserts the room used it rather than assuming the first option.
     const byMedia = new Map(
-      index.pool.map((item) => [String(item.payload["mediaUrl"] ?? ""), item.id])
+      index.pool.map((item) => [
+        String(item.payload["mediaUrl"] ?? ""),
+        item.id,
+      ])
     )
 
     for (const round of rounds) {

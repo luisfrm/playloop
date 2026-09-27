@@ -24,7 +24,9 @@ test("a downloaded game is playable with the network switched off", async ({
     .getByRole("button", { name: "Descargar para jugar sin conexión" })
     .click()
   await expect(
-    page.getByText("Descargado. Se juega en modo práctica: no entra al ranking.")
+    page.getByText(
+      "Descargado. Se juega en modo práctica: no entra al ranking."
+    )
   ).toBeVisible()
 
   await page.getByRole("link", { name: "Jugar sin conexión" }).click()

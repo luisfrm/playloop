@@ -306,15 +306,13 @@ export class D1Repository implements ContentRepository {
     const now = Date.now()
     await this.db.delete(blockedTerm)
     if (terms.length === 0) return
-    await this.db
-      .insert(blockedTerm)
-      .values(
-        terms.map((term, index) => ({
-          id: `term-${index}-${now.toString(36)}`,
-          term,
-          createdAt: now,
-        }))
-      )
+    await this.db.insert(blockedTerm).values(
+      terms.map((term, index) => ({
+        id: `term-${index}-${now.toString(36)}`,
+        term,
+        createdAt: now,
+      }))
+    )
   }
 
   async setPlayerHidden(

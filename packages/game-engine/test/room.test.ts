@@ -184,9 +184,9 @@ describe("submitRoomAnswer", () => {
   })
 
   it("refuses an option the round does not offer", () => {
-    expect(submitRoomAnswer(playing(), "host", "inventada", 2_500)).toMatchObject(
-      { ok: false, reason: "unknown_option" }
-    )
+    expect(
+      submitRoomAnswer(playing(), "host", "inventada", 2_500)
+    ).toMatchObject({ ok: false, reason: "unknown_option" })
   })
 
   it("refuses a score for a non-member", () => {
@@ -298,7 +298,9 @@ describe("alarms and TTL", () => {
 
   it("destroys a finished room after the short window", () => {
     const finished = finishRoom(playing(), 9_000)
-    expect(shouldDestroy(finished, 9_000 + ROOM_FINISHED_TTL_MS - 1)).toBe(false)
+    expect(shouldDestroy(finished, 9_000 + ROOM_FINISHED_TTL_MS - 1)).toBe(
+      false
+    )
     expect(shouldDestroy(finished, 9_000 + ROOM_FINISHED_TTL_MS)).toBe(true)
   })
 })

@@ -16,9 +16,7 @@ test("every panel route turns an anonymous visitor away", async ({ page }) => {
     await expect(page).toHaveURL(/\/admin\/entrar/)
     await expect(page.getByRole("heading", { name: "Panel" })).toBeVisible()
     // The destination survives the detour.
-    await expect(
-      page.getByRole("button", { name: "Entrar" })
-    ).toBeVisible()
+    await expect(page.getByRole("button", { name: "Entrar" })).toBeVisible()
   }
 })
 

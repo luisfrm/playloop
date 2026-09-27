@@ -224,9 +224,10 @@ async function validateName(
     : { ok: false, message: "Ese nombre no está permitido. Prueba otro." }
 }
 
-async function loadSettings(
-  instance: { gameTypeKey: string; settings: unknown }
-): Promise<{ definition: AnyDefinition; settings: BaseSettings }> {
+async function loadSettings(instance: {
+  gameTypeKey: string
+  settings: unknown
+}): Promise<{ definition: AnyDefinition; settings: BaseSettings }> {
   const definition = gameTypes.require(instance.gameTypeKey) as AnyDefinition
   const parsed = definition.settingsSchema.safeParse(instance.settings)
   const settings = {
@@ -251,7 +252,9 @@ async function createRoomRequest(
   const name = await validateName(repository, String(body["playerName"] ?? ""))
   if (!name.ok) return json({ error: name.message }, 400)
 
-  const instance = await repository.getInstanceBySlug(String(body["slug"] ?? ""))
+  const instance = await repository.getInstanceBySlug(
+    String(body["slug"] ?? "")
+  )
   if (!instance || !instance.published) {
     return json({ error: "Ese juego no existe o no está publicado." }, 404)
   }
@@ -261,7 +264,10 @@ async function createRoomRequest(
     instance.id
   )) as ContentItem<Payload>[]
   if (pool.length < 2) {
-    return json({ error: "Este juego todavía no tiene contenido suficiente." }, 409)
+    return json(
+      { error: "Este juego todavía no tiene contenido suficiente." },
+      409
+    )
   }
 
   const { rounds, optionLabels } = buildRoomRounds({

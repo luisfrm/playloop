@@ -167,13 +167,7 @@ export function startPractice(
   const pool = poolOf(instance)
   if (pool.length < 2) return null
 
-  const round = buildRound(
-    definitionOf(instance),
-    pool,
-    settings,
-    [],
-    random
-  )
+  const round = buildRound(definitionOf(instance), pool, settings, [], random)
   if (!round) return null
 
   const answerMode = answerModeFor(instance, requestedMode)

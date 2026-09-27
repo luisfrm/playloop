@@ -58,7 +58,10 @@ export function joinRoom(
   return post(`/api/room/${code}`, { action: "join", playerId, playerName })
 }
 
-export function startRoom(code: string, playerId: string): Promise<RoomResponse> {
+export function startRoom(
+  code: string,
+  playerId: string
+): Promise<RoomResponse> {
   return post(`/api/room/${code}`, { action: "start", playerId })
 }
 
@@ -70,7 +73,10 @@ export function answerRoom(
   return post(`/api/room/${code}`, { action: "answer", playerId, optionId })
 }
 
-export function leaveRoom(code: string, playerId: string): Promise<RoomResponse> {
+export function leaveRoom(
+  code: string,
+  playerId: string
+): Promise<RoomResponse> {
   return post(`/api/room/${code}`, { action: "leave", playerId })
 }
 

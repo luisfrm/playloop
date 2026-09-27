@@ -53,7 +53,7 @@ export function GameCard({ game, index }: GameCardProps) {
           {game.description ?? "Sin descripción todavía."}
         </p>
 
-        <p className="mt-auto flex items-center gap-2 pt-2 font-label text-[11px] tracking-[0.08em] uppercase">
+        <p className="font-label mt-auto flex items-center gap-2 pt-2 text-[11px] tracking-[0.08em] uppercase">
           <CharacterMark />
           {game.contentCount} elementos
         </p>

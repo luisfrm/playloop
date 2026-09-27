@@ -61,7 +61,7 @@ export default function Ranking() {
                 className="flex flex-wrap items-center justify-between gap-3 px-5 py-4"
               >
                 <div className="flex min-w-0 items-center gap-4">
-                  <span className="min-w-8 font-label text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
+                  <span className="font-label min-w-8 text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
                     {(index + 1).toString().padStart(2, "0")}
                   </span>
                   <span className="min-w-0 truncate font-heading text-lg font-bold">

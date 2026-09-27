@@ -101,9 +101,7 @@ export class RoomDurableObject extends DurableObject<Env> {
     questionDurationMs: number
   }): Promise<void> {
     if (this.room) return
-    await this.persist(
-      createRoom({ ...input, now: Date.now() })
-    )
+    await this.persist(createRoom({ ...input, now: Date.now() }))
   }
 
   async join(playerId: string, name: string): Promise<RoomActionResult> {

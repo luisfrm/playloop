@@ -147,10 +147,7 @@ export function clearAdminCookie(): string {
 
 /** The `Set-Cookie` to send after a successful login. */
 export function adminCookieForRequest(token: string, request: Request): string {
-  return serializeAdminCookie(
-    token,
-    new URL(request.url).protocol === "https:"
-  )
+  return serializeAdminCookie(token, new URL(request.url).protocol === "https:")
 }
 
 export async function isAdmin(context: unknown, request: Request) {
