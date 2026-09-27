@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": ["@cloudflare/workers-types", "vite/client"],
+    "strict": true,
+    "skipLibCheck": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+    "paths": {
+      "@playloop/game-engine": ["../../../packages/game-engine/src/index.ts"]
+    }
+  },
+  "include": ["./*.ts"],
+  // `wrangler types` re-declares the runtime globals that
+  // `@cloudflare/workers-types` already provides, so it is opt-in and excluded.
+  "exclude": ["worker-configuration.d.ts"]
+}

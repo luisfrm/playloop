@@ -1,0 +1,50 @@
+{
+  "name": "web",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "react-router dev",
+    "build": "react-router build",
+    "preview": "react-router build && vite preview",
+    "deploy": "react-router build && wrangler deploy",
+    "cf-typegen": "wrangler types workers/worker-configuration.d.ts",
+    "format": "prettier --write \"**/*.{ts,tsx}\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:report": "playwright show-report",
+    "typecheck": "react-router typegen && tsc",
+    "typecheck:workers": "react-router typegen && tsc -p workers/tsconfig.json"
+  },
+  "dependencies": {
+    "@playloop/db": "workspace:*",
+    "@playloop/game-engine": "workspace:*",
+    "@playloop/ui": "workspace:*",
+    "isbot": "^5",
+    "lucide-react": "^1.48.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-router": "^8.4.0"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.60.2",
+    "@cloudflare/workers-types": "^5.20260927.1",
+    "@playwright/test": "^1.63.0",
+    "@react-router/cloudflare": "^8.4.0",
+    "@react-router/dev": "^8.4.0",
+    "@tailwindcss/vite": "^4",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6.1.1",
+    "jsdom": "^30.1.1",
+    "tailwindcss": "^4",
+    "typescript": "^6",
+    "vite": "^8",
+    "vitest": "^5.0.2",
+    "wrangler": "^4.141.0"
+  }
+}

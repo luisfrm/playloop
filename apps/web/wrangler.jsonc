@@ -1,0 +1,39 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "playloop",
+  // The Cloudflare Vite plugin bundles this entry; the generated
+  // `dist/<name>/wrangler.json` is what `wrangler deploy` consumes.
+  "main": "./workers/app.ts",
+  "compatibility_date": "2025-04-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+
+  "d1_databases": [
+    { "binding": "DB", "database_name": "playloop", "database_id": "REPLACE_WITH_D1_ID" }
+  ],
+
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "playloop-media" }],
+
+  "kv_namespaces": [{ "binding": "CACHE", "id": "REPLACE_WITH_KV_ID" }],
+
+  "durable_objects": {
+    "bindings": [{ "name": "ROOMS", "class_name": "RoomDurableObject" }]
+  },
+
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["RoomDurableObject"] }
+  ],
+
+  "vars": {
+    "MEDIA_PUBLIC_BASE_URL": "",
+    // Development defaults, so `pnpm dev` needs no setup. The panel shows a
+    // warning while they are still in use. Replace both before deploying —
+    // a secret of the same name wins over the var here.
+    "ADMIN_PASSWORD": "playloop-dev",
+    "ADMIN_SESSION_SECRET": "playloop-dev-secret"
+  }
+
+  // Secrets are set with `wrangler secret put`, never committed:
+  //   ADMIN_PASSWORD, ADMIN_SESSION_SECRET,
+  //   R2_S3_ENDPOINT, R2_BUCKET, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY
+}

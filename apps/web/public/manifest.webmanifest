@@ -1,0 +1,25 @@
+{
+  "name": "Playloop",
+  "short_name": "Playloop",
+  "description": "Juegos para todos, sin registro. Elige un juego, deja tu nombre y entra al ranking.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f2e7",
+  "theme_color": "#f7f2e7",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
