@@ -13,6 +13,7 @@ import {
 
 import type { CloudflareEnv } from "./cloudflare-context"
 import { repositoryFromEnv } from "./repository.server"
+import { readSettings } from "./settings.server"
 
 /**
  * The cooperative room API.
@@ -62,7 +63,6 @@ const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 const CODE_LENGTH = 6
 /** A room is a session, not an endless quiz: ten rounds is plenty. */
 const ROUNDS_PER_ROOM = 10
-const MAX_NAME_LENGTH = 24
 const ROOM_PATH = /^\/api\/room(?:\/([A-Za-z0-9]+))?$/
 const DEFAULT_QUESTION_SECONDS = 30
 
@@ -211,7 +211,8 @@ async function validateName(
   repository: ContentRepository,
   rawName: string
 ): Promise<{ ok: true; name: string } | { ok: false; message: string }> {
-  const name = rawName.trim().slice(0, MAX_NAME_LENGTH)
+  const { nameMaxLength } = await readSettings(repository)
+  const name = rawName.trim().slice(0, nameMaxLength)
   if (name.length < 2) {
     return {
       ok: false,

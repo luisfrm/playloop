@@ -26,6 +26,7 @@ export default [
       route("nuevo", "routes/admin-new.tsx"),
       route("juego/:id", "routes/admin-instance.tsx"),
       route("moderacion", "routes/admin-moderation.tsx"),
+      route("configuracion", "routes/admin-config.tsx"),
     ]),
   ]),
 ] satisfies RouteConfig

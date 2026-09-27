@@ -26,6 +26,7 @@ export class MemoryRepository implements ContentRepository {
   private scores: ScoreRecord[] = []
   private blocked = new Set<string>()
   private hidden = new Set<string>()
+  private settings = new Map<string, unknown>()
   private sequence = 0
 
   private nextId(prefix: string): string {
@@ -186,6 +187,14 @@ export class MemoryRepository implements ContentRepository {
 
   async isPlayerHidden(playerId: string): Promise<boolean> {
     return this.hidden.has(playerId)
+  }
+
+  async listSettings(): Promise<Record<string, unknown>> {
+    return Object.fromEntries(this.settings)
+  }
+
+  async saveSetting(key: string, value: unknown): Promise<void> {
+    this.settings.set(key, value)
   }
 }
 

@@ -87,4 +87,8 @@ export interface ContentRepository {
     reason?: string
   ): Promise<void>
   isPlayerHidden(playerId: string): Promise<boolean>
+
+  /** Panel-owned runtime settings, keyed by name. Values are opaque JSON. */
+  listSettings(): Promise<Record<string, unknown>>
+  saveSetting(key: string, value: unknown): Promise<void>
 }

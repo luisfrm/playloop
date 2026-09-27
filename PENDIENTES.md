@@ -1,8 +1,8 @@
 # Pendientes
 
 Lista de lo que falta por completar. Revisada el 2026-09-27 con
-`pnpm typecheck` (ok), `pnpm lint` (0 errores), `pnpm test` (232 pasos) y
-`pnpm --filter web test:e2e` (22 pasos, 0 fallos).
+`pnpm typecheck` (ok), `pnpm lint` (0 errores), `pnpm test` (237 pasos) y
+`pnpm --filter web test:e2e` (23 pasos, 0 fallos).
 
 ## Bug de producto
 
@@ -56,8 +56,12 @@ Lista de lo que falta por completar. Revisada el 2026-09-27 con
   Escape, con la X o con el fondo y vuelve a aparecer en la próxima visita
   hasta que se guarda un nombre. El disclosure del TopNav sigue ahí para
   editarlo después. Cubierto con tests unitarios y e2e.
-- [ ] **8. §12 — Sección "Configuración" del panel.** La tabla
-  `app_setting` existe pero nadie la lee ni la escribe; no hay ruta.
+- [x] **8. §12 — Sección "Configuración" del panel.** La tabla
+  `app_setting` no la leía nadie. Nuevos `listSettings`/`saveSetting` en el
+  repositorio (D1 y memoria), `app/lib/settings.ts` (valores, rangos y parseo
+  del formulario) y `/admin/configuracion` con su entrada en el sidebar. Los
+  límites que estaban en código pasan a ser datos: puestos del ranking,
+  largo máximo del nombre (también en las salas) y partidas por minuto.
 - [x] **9. §5 — Importación de diccionario por archivo CSV.** Solo había un
   textarea; `parseDictionaryText` ya soportaba el formato. Añadido
   `components/dictionary-import.tsx`: el archivo se copia al cuadro para

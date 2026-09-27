@@ -1,5 +1,5 @@
 import { Logo } from "@playloop/ui/components/logo"
-import { LayoutGrid, LogOut, Shield, Sparkles } from "lucide-react"
+import { LayoutGrid, LogOut, Settings, Shield, Sparkles } from "lucide-react"
 import { Form, NavLink, Outlet } from "react-router"
 
 import { requireAdmin } from "@/lib/admin-auth.server"
@@ -21,6 +21,12 @@ const SECTIONS = [
     to: "/admin/moderacion",
     label: "Ranking y moderación",
     icon: Shield,
+    end: false,
+  },
+  {
+    to: "/admin/configuracion",
+    label: "Configuración",
+    icon: Settings,
     end: false,
   },
 ]

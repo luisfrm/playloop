@@ -9,6 +9,7 @@ import {
 } from "@/lib/play-service.server"
 import { getRepository } from "@/lib/repository.server"
 import { getSessionStore, type SessionStore } from "@/lib/sessions.server"
+import { readSettings } from "@/lib/settings.server"
 import { checkName } from "@playloop/game-engine"
 import type { ContentRepository } from "@playloop/db"
 
@@ -32,10 +33,6 @@ type PlayIntent = {
   playerId: string
 }
 
-const MAX_NAME_LENGTH = 24
-
-/** Soft ceiling so a script cannot mint sessions in a loop. */
-const MAX_STARTS_PER_MINUTE = 20
 const START_WINDOW_MS = 60_000
 
 export async function action({ request, context }: Route.ActionArgs) {
@@ -68,7 +65,8 @@ async function startGame(intent: PlayIntent) {
   const { body, repository, store, playerId } = intent
 
   const blockedTerms = await repository.listBlockedTerms()
-  const rawName = (body.playerName ?? "").trim().slice(0, MAX_NAME_LENGTH)
+  const { nameMaxLength, startsPerMinute } = await readSettings(repository)
+  const rawName = (body.playerName ?? "").trim().slice(0, nameMaxLength)
   if (rawName.length < 2) {
     return data(
       { error: "Necesitas un nombre de al menos 2 caracteres." },
@@ -83,7 +81,7 @@ async function startGame(intent: PlayIntent) {
   }
 
   const attempts = await store.countRecent(`start:${playerId}`, START_WINDOW_MS)
-  if (attempts > MAX_STARTS_PER_MINUTE) {
+  if (attempts > startsPerMinute) {
     return data(
       { error: "Demasiadas partidas seguidas. Espera un momento." },
       { status: 429 }

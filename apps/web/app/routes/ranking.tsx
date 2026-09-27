@@ -4,6 +4,7 @@ import { data, Link, useLoaderData } from "react-router"
 import { SiteFooter } from "@/components/site-footer"
 import { TopNav } from "@/components/top-nav"
 import { getRepository } from "@/lib/repository.server"
+import { readSettings } from "@/lib/settings.server"
 
 import type { Route } from "./+types/ranking"
 
@@ -15,10 +16,12 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     throw data({ message: "Ese juego no existe." }, { status: 404 })
   }
 
+  const { rankingSize } = await readSettings(repository)
+
   return {
     title: instance.title,
     slug: instance.slug,
-    rows: await repository.listRanking(instance.id, 50),
+    rows: await repository.listRanking(instance.id, rankingSize),
   }
 }
 
@@ -61,7 +64,7 @@ export default function Ranking() {
                 className="flex flex-wrap items-center justify-between gap-3 px-5 py-4"
               >
                 <div className="flex min-w-0 items-center gap-4">
-                  <span className="font-label min-w-8 text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
+                  <span className="min-w-8 font-label text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
                     {(index + 1).toString().padStart(2, "0")}
                   </span>
                   <span className="min-w-0 truncate font-heading text-lg font-bold">

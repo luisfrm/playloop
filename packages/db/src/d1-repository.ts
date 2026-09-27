@@ -7,6 +7,7 @@ import { and, desc, eq, like } from "drizzle-orm"
 import { drizzle, type DrizzleD1Database } from "drizzle-orm/d1"
 
 import {
+  parseJson,
   toContentItem,
   toDictionaryEntry,
   toGameInstance,
@@ -21,6 +22,7 @@ import type {
   ScoreRecord,
 } from "./repository.js"
 import {
+  appSetting,
   blockedTerm,
   contentItem,
   dictionaryEntry,
@@ -345,5 +347,24 @@ export class D1Repository implements ContentRepository {
       )
       .limit(1)
     return rows.length > 0
+  }
+
+  async listSettings(): Promise<Record<string, unknown>> {
+    const rows = await this.db.select().from(appSetting)
+    return Object.fromEntries(
+      rows.map((row) => [row.key, parseJson<unknown>(row.valueJson, null)])
+    )
+  }
+
+  async saveSetting(key: string, value: unknown): Promise<void> {
+    const valueJson = JSON.stringify(value ?? null)
+    const updatedAt = Date.now()
+    await this.db
+      .insert(appSetting)
+      .values({ key, valueJson, updatedAt })
+      .onConflictDoUpdate({
+        target: appSetting.key,
+        set: { valueJson, updatedAt },
+      })
   }
 }
