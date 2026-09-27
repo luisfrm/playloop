@@ -1,0 +1,29 @@
+.DS_Store
+.env*
+node_modules
+
+# turbo
+.turbo
+
+# cloudflare
+.wrangler
+
+# React Router
+.react-router
+
+# Playwright
+.e2e
+test-results
+playwright-report
+build
+dist
+
+# typescript
+*.tsbuildinfo
+
+# misc
+*.pem
+
+# debug
+npm-debug.log*
+pnpm-debug.log*
