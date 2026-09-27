@@ -1,159 +1,162 @@
-# Design System — Tema por defecto
+# Design System — tema «Volt»
 
-Este documento define el tema visual por defecto de la plataforma. Todo está resuelto como **variables CSS**, siguiendo la regla del proyecto: cambiar de tema (para un nuevo contenido/marca) debe implicar tocar únicamente estos valores, nunca los componentes.
+La fuente de verdad es `packages/ui/src/styles/globals.css`: este documento
+explica las decisiones y los roles, pero los valores viven en ese archivo. Si
+cambian allí, hay que actualizar aquí.
 
-## Dirección de diseño
+Todo es **CSS**: variables en `:root` y utilidades de Tailwind v4 generadas
+desde el bloque `@theme inline`. Cambiar de tema (otra marca, otro contenido)
+debería tocar solo esos valores, nunca los componentes.
 
-No es "modo oscuro genérico + un acento neón". La identidad se construye con **varios tonos de azul en capas** (el fondo, las superficies y el acento no son el mismo azul) más dos acentos semánticos (éxito/error) que se mantienen fuera de la familia azul para que la retroalimentación del juego sea instantánea y no se confunda con la marca.
+## 1. Dirección
 
-- El fondo nunca es negro puro: es un azul-tinta casi negro, para que la superficie se sienta parte de una misma familia de color.
-- La jerarquía se comunica **elevando el tono de azul** (fondo → superficie → superficie elevada), no solo con sombra gris genérica.
-- El acento primario es vívido y se usa con disciplina: para acciones principales, focus y estados activos — no como relleno decorativo.
-- El feedback del juego (correcto / incorrecto / vidas / tiempo) usa colores semánticos deliberadamente fuera del azul, para que nunca se pierdan contra el fondo de marca.
+No es «modo oscuro genérico más un acento neón». La identidad se construye con
+**azules en capas** (fondo, superficies y acento no son el mismo azul), una
+**familia de cinco acentos** para que una parrilla de fichas nunca repita color,
+y dos colores semánticos fuera de la familia azul para que el feedback del juego
+no se confunda con la marca.
 
----
+- El fondo nunca es negro puro: es un azul-tinta casi negro.
+- La jerarquía sube por tono de azul (fondo → `card` → `popover`), no por sombra
+  gris genérica.
+- El único tema que se sirve es el oscuro: `.dark` repite los valores de `:root`
+  a propósito, para no romper la convención de shadcn cuando exista un tema
+  claro.
+- Los colores se declaran en **oklch** nativo (`oklch(L C H)` y con alfa), sin
+  envolverlos en `hsl()`.
 
-## 1. Paleta base
+## 2. Paleta
 
-| Token | Uso | Hex aprox. | HSL |
-|---|---|---|---|
-| `ink` | Fondo base de la app | `#070B18` | `226 55% 6%` |
-| `surface` | Cards, inputs, filas | `#101B30` | `219 50% 12%` |
-| `surface-raised` | Modales, popovers, dropdowns | `#182544` | `222 48% 18%` |
-| `border` | Bordes sutiles sobre superficie | `#223154` | `222 42% 23%` |
-| `primary` | Acción principal, marca, focus | `#2F6FFF` | `221 100% 59%` |
-| `accent` | Highlight secundario, elementos activos/hover | `#35D0FF` | `194 100% 60%` |
-| `foreground` | Texto principal sobre fondo oscuro | `#E7ECFA` | `224 66% 94%` |
-| `muted-foreground` | Texto secundario, hints, timestamps | `#8793B3` | `224 22% 62%` |
-| `success` | Respuesta correcta, confirmaciones | `#2DD9A0` | `160 69% 51%` |
-| `warning` | Vida perdida, advertencias | `#FFB020` | `39 100% 56%` |
-| `destructive` | Respuesta incorrecta, game over, errores | `#FF4D6D` | `349 100% 65%` |
+| Token | Uso | Valor |
+|---|---|---|
+| `--background` | Fondo de la app | `oklch(0.16 0.035 258)` |
+| `--foreground` | Texto principal | `oklch(0.95 0.02 250)` |
+| `--card` | Superficies: fichas, paneles, inputs | `oklch(0.21 0.04 258)` |
+| `--popover` | Modales, menús, diálogos | `oklch(0.26 0.045 258)` |
+| `--primary` | Acción principal, marca, foco | `oklch(0.62 0.2 262)` |
+| `--primary-deep` | Bordes y estados hundidos del primario | `oklch(0.48 0.19 262)` |
+| `--primary-cast` | Velo del primario para capas translúcidas | `oklch(0.62 0.2 262 / 0.45)` |
+| `--secondary` | Controles secundarios | `oklch(0.27 0.035 258)` |
+| `--muted` | Rellenos apagados, fondos de chips | `oklch(0.24 0.03 258)` |
+| `--muted-foreground` | Texto secundario, metadatos | `oklch(0.68 0.035 258)` |
+| `--accent` | Hover y resaltado (cian, el segundo azul) | `oklch(0.78 0.14 210)` |
+| `--accent-2` | Acento cian de la familia múltiple | `oklch(0.78 0.14 235)` |
+| `--accent-3` | Acento coral de la familia múltiple | `oklch(0.72 0.18 18)` |
+| `--mint` | Acento menta de la familia múltiple | `oklch(0.78 0.15 165)` |
+| `--lavender` | Acento lavanda de la familia múltiple | `oklch(0.76 0.12 300)` |
+| `--success` | Acierto, confirmaciones | `oklch(0.78 0.15 165)` |
+| `--warning` | Aviso, tiempo justo | `oklch(0.8 0.15 80)` |
+| `--destructive` | Fallo, error, acción irreversible | `oklch(0.66 0.21 18)` |
+| `--border-subtle` | Borde apenas visible | `oklch(0.85 0.05 258 / 10%)` |
+| `--border` | Borde por defecto | `oklch(0.85 0.06 258 / 16%)` |
+| `--border-strong` | Borde de foco o separador fuerte | `oklch(0.85 0.08 258 / 28%)` |
+| `--input` | Borde de campos de formulario | `oklch(0.85 0.06 258 / 20%)` |
+| `--ring` | Anillo de foco | `oklch(0.62 0.2 262)` |
 
-`primary` y `accent` están a ~27° de distancia en el círculo cromático (azul → cian): suficiente para que se distingan sin salir de la familia fría de la marca.
+Los bordes son **tres capas de alfa azulada**, no una línea gris plana: sobre
+distintas superficies el mismo borde sigue leyéndose.
 
----
+### Acentos múltiples
 
-## 2. Variables CSS (listas para `globals.css`)
+`pear` reutiliza `--primary`; los otros cuatro (`accent-2`, `accent-3`, `mint`,
+`lavender`) son tonos propios. Los usan las insignias (`Badge`), la parrilla del
+catálogo (una tinta por ficha, rotando por índice) y la marca de personaje. Se
+exponen como colores de Tailwind (`bg-accent-2`, `border-mint`, …) desde
+`@theme inline`.
 
-Formato compatible con shadcn/ui (HSL sin la función `hsl()`, para poder usarlas como `hsl(var(--primary))` en Tailwind).
+### Tokens heredados de shadcn
 
-```css
-:root {
-  --background: 226 55% 6%;
-  --foreground: 224 66% 94%;
-
-  --card: 219 50% 12%;
-  --card-foreground: 224 66% 94%;
-
-  --popover: 222 48% 18%;
-  --popover-foreground: 224 66% 94%;
-
-  --primary: 221 100% 59%;
-  --primary-foreground: 226 55% 6%;
-
-  --secondary: 219 50% 16%;
-  --secondary-foreground: 224 66% 94%;
-
-  --muted: 219 40% 14%;
-  --muted-foreground: 224 22% 62%;
-
-  --accent: 194 100% 60%;
-  --accent-foreground: 226 55% 6%;
-
-  --success: 160 69% 51%;
-  --success-foreground: 226 55% 6%;
-
-  --warning: 39 100% 56%;
-  --warning-foreground: 226 55% 6%;
-
-  --destructive: 349 100% 65%;
-  --destructive-foreground: 226 55% 6%;
-
-  --border: 222 42% 23%;
-  --input: 222 42% 23%;
-  --ring: 221 100% 59%;
-
-  --radius: 0.75rem;
-}
-```
-
-`success` y `warning` no son tokens nativos de shadcn: agrégalos como variantes extra en `packages/ui` (mismo patrón que `destructive`) para poder usarlos en `Badge`, `Button` y en los indicadores de vidas/tiempo del juego.
-
----
+`--chart-1…5` y la familia `--sidebar-*` existen para que los componentes de
+shadcn tengan lo que esperan; el panel no los usa todavía.
 
 ## 3. Tipografía
 
-| Rol | Familia | Notas |
+Las fuentes se instalan como paquetes (`@fontsource-variable/*`), no por CDN:
+
+| Rol | Token | Familia |
 |---|---|---|
-| Display / headings | **Space Grotesk** | Geométrica, algo técnica — le da carácter de "producto de juego", no de dashboard genérico |
-| Body / UI (panel, formularios, texto largo) | **Inter** | Alta legibilidad en tamaños pequeños, necesaria para el panel admin |
+| Display y títulos | `--font-heading` | **Outfit Variable** (aplicada a `h1`–`h4`) |
+| Cuerpo y UI | `--font-sans` | **Geist Variable** (fuente base del `body`) |
+| Labels, cifras y código | `--font-label`, `--font-mono` | **JetBrains Mono Variable** |
 
-```css
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
+Escala que usan los componentes:
 
---font-display: 'Space Grotesk', system-ui, sans-serif;
---font-body: 'Inter', system-ui, sans-serif;
-```
+| Uso | Clases | Peso |
+|---|---|---|
+| Título de página | `font-heading text-2xl`–`text-4xl` (según ruta) | `bold` |
+| Título de ficha o panel | `font-heading text-lg`–`text-2xl` | `bold` |
+| Cuerpo | `text-sm`–`text-base` | `normal` |
+| Metadatos y ayudas | `text-xs`–`text-sm text-muted-foreground` | `normal` |
+| Labels | `font-label text-[11px] uppercase tracking-[0.08em]` | `medium` |
 
-Escala tipográfica (line-height incluido, evitar usar solo `text-Npx` sin ritmo):
+Las **mayúsculas y el tracking amplio** se reservan para labels y para datos que
+se leen como etiqueta (códigos de sala, estados). El texto corriente va en
+sentence case; no se usan «eyebrows» decorativos ni em-dashes de adorno.
+El `body` fija `font-variant-numeric: tabular-nums`, así que marcadores y
+tiempos no bailan al cambiar de dígito.
 
-| Uso | Tamaño | Line-height | Peso |
-|---|---|---|---|
-| Título de sección (home) | 2.25rem (36px) | 1.15 | 600–700 |
-| Título de card / juego | 1.25rem (20px) | 1.3 | 600 |
-| Cuerpo | 1rem (16px) | 1.5 | 400 |
-| Texto secundario / meta | 0.875rem (14px) | 1.4 | 400–500 |
-| Label de UI (botones, badges) | 0.8125rem (13px) | 1 | 500–600 |
+## 4. Radios
 
-No usar mayúsculas sostenidas (`uppercase`) como recurso por defecto en labels — solo si el propio contenido lo pide (ej. un código de sala corto).
-
----
-
-## 4. Radios y elevación
-
-Los radios comunican jerarquía, no son un valor único repetido en todo:
+`--radius: 0.75rem` y una escala derivada: `--radius-sm` (0.6×), `--radius-md`
+(0.8×), `--radius-lg` (1×), `--radius-xl` (1.3×), `--radius-2xl` (1.6×) y
+`--radius-pill` (9999px). El radio comunica jerarquía, no se repite en todo:
 
 | Elemento | Radio |
 |---|---|
-| Botones | `rounded-full` (pill) — refuerza el carácter lúdico/interactivo |
-| Cards de juego, inputs | `rounded-2xl` (`--radius`) |
-| Modales, popovers | `rounded-xl` |
-| Badges, chips (vidas, tiempo) | `rounded-full` |
+| Botones | `rounded-lg` |
+| Inputs y campos | `rounded-[var(--radius-md)]` |
+| Fichas, paneles y diálogos | `rounded-[var(--radius-lg)]` |
+| Insignias, chips y contadores | `rounded-full` |
 
-Elevación: en vez de sombra gris genérica (`rgba(0,0,0,.1)` en todo), usar **glow de color** ligado al azul de marca para elementos activos/focus, y solo el salto de tono de superficie (`surface` → `surface-raised`) para jerarquía pasiva:
+## 5. Elevación y foco
 
-```css
---shadow-elevated: 0 8px 24px -8px hsl(226 55% 2% / 0.6);
---shadow-glow-primary: 0 0 0 1px hsl(var(--primary) / 0.4), 0 0 24px hsl(var(--primary) / 0.25);
---shadow-glow-accent: 0 0 0 1px hsl(var(--accent) / 0.4), 0 0 20px hsl(var(--accent) / 0.2);
-```
+No hay tokens de sombra globales: cada variante de componente define la suya en
+oklch, para que la sombra sea del mismo azul que el tema y no un gris neutro.
 
-`shadow-glow-primary` se usa en focus visible y en el estado "en curso" de una partida activa; no se aplica a todas las cards por igual (evitar que todo brille).
+- `Card`: `elevation="soft"` (por defecto) y `elevation="lifted"` cambian la
+  sombra; `flat` solo deja el borde.
+- Diálogos y popups usan una sombra más abierta (`shadow-[0_18px_44px_-20px_…]`).
+- El foco de teclado es un anillo con `--ring` (`focus-visible:ring-3`), nunca
+  `outline: none` sin sustituto.
 
----
+## 6. Movimiento
 
-## 5. Accesibilidad y foco
+Tokens en `:root`: `--ease-spring`, `--ease-snap`, `--ease-out`, y las
+duraciones `--dur-fast` (140 ms), `--dur-base` (220 ms), `--dur-slow` (600 ms).
+Los keyframes del tema son `playloop-pulse` (la marca de personaje, en reposo),
+`playloop-star-burst` (destello al acertar) y `playloop-marquee` (pie), y todos
+respetan `prefers-reduced-motion` por el override global de `@layer base`.
 
-- Foco de teclado siempre visible: anillo con `--ring` (`primary`) + `shadow-glow-primary`, nunca solo `outline: none`.
-- Contraste mínimo AA: `foreground` sobre `background`/`card` ya cumple (~13:1). Verificar `muted-foreground` sobre `surface` (queda ~4.6:1, límite — no usarlo para texto menor a 14px).
-- Reducir motion: respetar `prefers-reduced-motion`; las transiciones de acierto/error deben tener una alternativa sin animación (solo cambio de color + ícono).
+La animación se reserva para transiciones que responden a algo: acertar,
+terminar una ronda, abrir un diálogo. No se anima la entrada de cada ficha.
 
----
+## 7. Accesibilidad
 
-## 6. Componentes específicos del juego
+- Foco visible siempre, con `--ring`.
+- `foreground` sobre `background`/`card` supera AA con holgura;
+  `muted-foreground` está en el límite, así que no se usa para texto menor de
+  14 px.
+- Ningún estado se comunica **solo** por color: el acierto lleva color e icono.
+- `prefers-reduced-motion` desactiva animaciones y transiciones.
 
-Estos son los únicos lugares donde el color se desvía deliberadamente del azul de marca — es información, no decoración:
+## 8. Piezas propias del juego
 
-- **Vidas**: ícono lleno en `warning` mientras queda vida, ícono vacío en `border`/`muted-foreground`. Nunca `destructive` para "vida restante" (se reserva para el fallo final).
-- **Barra de tiempo**: `primary` mientras hay tiempo cómodo, transición a `warning` bajo el 30%, a `destructive` bajo el 10%. Un solo color por estado, sin degradado arcoíris.
-- **Feedback de respuesta**: fondo/borde `success` en la opción correcta, `destructive` en la opción marcada si fue incorrecta. El resto de las opciones baja opacidad, no cambia de color.
-- **Sala de código (coop)**: el código se muestra en `font-display`, tamaño grande, con `letter-spacing` leve — es el único lugar donde el tracking amplio está justificado (es un código para leer y compartir, no una etiqueta decorativa).
+- **Resaltado en línea**: `em` y `.hl` pintan un subrayado degradado cian
+  (`--hl`), no un fondo de marca, para que un énfasis no parezca un botón.
+- **Tiempo**: cuenta atrás con cifras monoespaciadas; bajo el último tramo pasa
+  a `--warning`.
+- **Feedback de respuesta**: `--success` en la opción correcta y `--destructive`
+  en la marcada si falló; el resto de opciones baja opacidad, no cambia de color.
+- **Código de sala**: se muestra con `font-heading` en tamaño grande; es el
+  único sitio donde el tracking amplio está justificado.
+- **Marca de personaje**: un punto `--accent-3` que pulsa en reposo y se agranda
+  al pasar el puntero, hecho solo con CSS.
 
----
+## 9. Qué evitar
 
-## 7. Qué evitar (por diseño, no por accidente)
-
-- Un único acento brillante sobre negro plano — aquí hay dos azules distintos + superficies escalonadas, no un tono plano.
-- Cards idénticas con el mismo radio y la misma sombra gris para todo — los radios varían por rol (botón vs. card vs. modal).
-- Eyebrows en mayúsculas o labels con em-dash como adorno — el texto de UI es directo y en sentence case.
-- Animación de entrada (fade + slide) repetida en cada card del grid — la animación se reserva para transiciones que responden a una acción del jugador (acertar, perder una vida, abrir un modal).
+- Un único acento brillante sobre negro plano: aquí hay varios azules en capas y
+  una familia de acentos.
+- Sombras grises genéricas o el mismo radio y la misma sombra para todo.
+- Mayúsculas sostenidas, tracking amplio o em-dashes como decoración.
+- Duplicar valores en los componentes: si un color o un radio hace falta, sale
+  de un token de `globals.css`.

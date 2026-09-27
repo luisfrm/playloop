@@ -41,6 +41,15 @@
     --accent: oklch(0.78 0.14 210);
     --accent-foreground: oklch(0.18 0.03 258);
  
+    /* Volt 
+·
+ multi-accent family: five distinct hues, so a grid of tiles
+       never repeats a colour (badges, catalogue cards, the character mark). */
+    --accent-2: oklch(0.78 0.14 235);
+    --accent-3: oklch(0.72 0.18 18);
+    --mint: oklch(0.78 0.15 165);
+    --lavender: oklch(0.76 0.12 300);
+ 
     /* Semantic feedback lives outside the blue family on purpose (game state, not brand) */
     --success: oklch(0.78 0.15 165);
     --success-foreground: oklch(0.18 0.03 258);
@@ -104,6 +113,15 @@
     --muted-foreground: oklch(0.68 0.035 258);
     --accent: oklch(0.78 0.14 210);
     --accent-foreground: oklch(0.18 0.03 258);
+ 
+    /* Volt 
+·
+ multi-accent family: five distinct hues, so a grid of tiles
+       never repeats a colour (badges, catalogue cards, the character mark). */
+    --accent-2: oklch(0.78 0.14 235);
+    --accent-3: oklch(0.72 0.18 18);
+    --mint: oklch(0.78 0.15 165);
+    --lavender: oklch(0.76 0.12 300);
     --success: oklch(0.78 0.15 165);
     --success-foreground: oklch(0.18 0.03 258);
     --warning: oklch(0.8 0.15 80);
@@ -152,6 +170,11 @@
     --color-border-strong: var(--border-strong);
     --color-input: var(--input);
     --color-ring: var(--ring);
+    --color-primary-cast: var(--primary-cast);
+    --color-accent-2: var(--accent-2);
+    --color-accent-3: var(--accent-3);
+    --color-mint: var(--mint);
+    --color-lavender: var(--lavender);
     --color-chart-1: var(--chart-1);
     --color-chart-2: var(--chart-2);
     --color-chart-3: var(--chart-3);
@@ -181,8 +204,10 @@
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
  
-    --font-sans: "Inter Variable", "Inter", system-ui, sans-serif;
-    --font-heading: "Space Grotesk Variable", "Space Grotesk", system-ui, sans-serif;
+    --font-sans: "Geist Variable", system-ui, sans-serif;
+    --font-heading: "Outfit Variable", system-ui, sans-serif;
+    --font-label: "JetBrains Mono Variable", ui-monospace, monospace;
+    --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
  
     --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
     --ease-snap: cubic-bezier(0.22, 1, 0.36, 1);

@@ -81,6 +81,9 @@ Lista de lo que falta por completar. Revisada el 2026-09-27 con
   `test`. Añadidos `vitest.config.ts` (jsdom, alias `@playloop/ui`) y cinco
   suites (`badge`, `button`, `card`, `input`, `logo`, 15 pasos) que cubren
   variantes, slots y el `render` de base-ui.
-- [ ] **14. `DESIGN.md` vs `globals.css`.** Divergen en formato de tokens
-  (HSL vs oklch), tipografías (Inter/Space Grotesk vs Outfit/Geist) y
-  radios de botón (`rounded-full` vs `rounded-lg`).
+- [x] **14. `DESIGN.md` vs `globals.css`.** `DESIGN.md` reescrito sobre el tema
+  Volt real: oklch, escala de radios por rol y fuentes Outfit/Geist/JetBrains
+  Mono. De paso, `globals.css` declaraba familias que no importaba y le
+  faltaban los tokens de acento que ya usaban `Badge`, `game-card` y
+  `character-mark` (`--accent-2`, `--accent-3`, `--mint`, `--lavender`), así que
+  no pintaban: definidos en `:root`, `.dark` y `@theme`.
