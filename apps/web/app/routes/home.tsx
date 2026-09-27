@@ -2,6 +2,7 @@ import { useNavigation } from "react-router"
 
 import { GameList } from "@/components/game-list"
 import { GameListSkeleton } from "@/components/game-list-skeleton"
+import { PlayerNamePopup } from "@/components/player-name-popup"
 import { SiteFooter } from "@/components/site-footer"
 import { TopNav } from "@/components/top-nav"
 import { listCatalogue } from "@/lib/catalogue"
@@ -58,6 +59,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
   return (
     <div className="flex min-h-svh flex-col">
+      {/* §13: asked before anything else, and only without a cached name. */}
+      <PlayerNamePopup />
       <TopNav />
 
       <main className="mx-auto w-full max-w-[80rem] flex-1 px-[clamp(1rem,4vw,1.5rem)] py-10">

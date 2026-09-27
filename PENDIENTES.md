@@ -47,9 +47,11 @@ Lista de lo que falta por completar. Revisada el 2026-09-27 con
 
 - [ ] **6. §14 — ESLint.** No existe ni script `lint`; falta la regla
   `complexity` máximo 15 por función.
-- [ ] **7. §13 — Popup de nombre en el Home.** Si no hay nombre en cache
-  debería mostrarse como primer elemento visible; hoy solo está el
-  disclosure del TopNav y hay que clicar.
+- [x] **7. §13 — Popup de nombre en el Home.** Si no hay nombre en cache el
+  Home abre un diálogo como primer elemento visible, que se cierra con
+  Escape, con la X o con el fondo y vuelve a aparecer en la próxima visita
+  hasta que se guarda un nombre. El disclosure del TopNav sigue ahí para
+  editarlo después. Cubierto con tests unitarios y e2e.
 - [ ] **8. §12 — Sección "Configuración" del panel.** La tabla
   `app_setting` existe pero nadie la lee ni la escribe; no hay ruta.
 - [x] **9. §5 — Importación de diccionario por archivo CSV.** Solo había un

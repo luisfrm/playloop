@@ -69,4 +69,17 @@ describe("Home", () => {
       /^0 juegos · /
     )
   })
+
+  it("puts the name question before anything else when nothing is cached", async () => {
+    localStorage.clear()
+
+    const { container } = renderHome(games)
+    await screen.findByRole("heading", { level: 1 })
+
+    const root = container.firstElementChild as HTMLElement
+    expect(root.firstElementChild).toHaveAttribute(
+      "data-slot",
+      "player-name-popup"
+    )
+  })
 })
