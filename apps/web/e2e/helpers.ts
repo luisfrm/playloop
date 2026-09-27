@@ -20,12 +20,14 @@ export function itemImage(item: ItemSpec): string {
 
 /**
  * Waits for the router's action round-trip rather than the click, so a spec
- * never races the form it just submitted.
+ * never races the form it just submitted. By default the action is expected to
+ * go through; a rejection the spec asked for names its status instead.
  */
 export async function submit(
   page: Page,
   buttonName: string,
-  pathPrefix: string
+  pathPrefix: string,
+  expectedStatus?: number
 ): Promise<void> {
   const posted = page.waitForResponse(
     (response) =>
@@ -36,10 +38,12 @@ export async function submit(
 
   // A rejected action still answers, so the status is what tells the two apart.
   const response = await posted
-  expect(
-    response.status(),
-    `${buttonName} answered ${response.status()}`
-  ).toBeLessThan(400)
+  const status = response.status()
+  if (expectedStatus !== undefined) {
+    expect(status, `${buttonName} answered ${status}`).toBe(expectedStatus)
+    return
+  }
+  expect(status, `${buttonName} answered ${status}`).toBeLessThan(400)
 }
 
 export async function loginAsOperator(page: Page): Promise<void> {

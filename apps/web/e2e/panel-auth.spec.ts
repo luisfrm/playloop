@@ -29,7 +29,8 @@ test("the panel sends the guarded route back after a wrong password", async ({
   await expect(page).toHaveURL(/redirectTo=%2Fadmin%2Fmoderacion/)
 
   await page.getByLabel("Contraseña").fill("no-es-la-clave")
-  await submit(page, "Entrar", "/admin/entrar")
+  // The action answers 401 on purpose: that rejection is the whole test.
+  await submit(page, "Entrar", "/admin/entrar", 401)
 
   await expect(page.getByRole("alert")).toHaveText("Contraseña incorrecta.")
   await expect(page).toHaveURL(/\/admin\/entrar/)
