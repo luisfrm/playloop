@@ -29,4 +29,23 @@ describe("Input", () => {
 
     expect(screen.getByRole("textbox", { name: "Nombre" })).toHaveClass("h-12")
   })
+
+  it("renders a right icon inside the input when given one", () => {
+    render(
+      <Input aria-label="Nombre" rightIcon={<span data-testid="icon" />} />
+    )
+
+    const input = screen.getByRole("textbox", { name: "Nombre" })
+    expect(input).toHaveClass("pr-10")
+    expect(screen.getByTestId("icon")).toBeInTheDocument()
+    expect(input.parentElement).toHaveAttribute("data-slot", "input-wrapper")
+  })
+
+  it("renders no wrapper without a right icon", () => {
+    const { container } = render(<Input aria-label="Nombre" />)
+
+    expect(
+      container.querySelector('[data-slot="input-wrapper"]')
+    ).not.toBeInTheDocument()
+  })
 })

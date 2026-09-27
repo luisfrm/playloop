@@ -26,7 +26,7 @@ test("the panel sends the guarded route back after a wrong password", async ({
   await page.goto("/admin/moderation")
   await expect(page).toHaveURL(/redirectTo=%2Fadmin%2Fmoderation/)
 
-  await page.getByLabel("Contraseña").fill("no-es-la-clave")
+  await page.getByLabel("Contraseña", { exact: true }).fill("no-es-la-clave")
   // The action answers 401 on purpose: that rejection is the whole test.
   await submit(page, "Entrar", "/admin/login", 401)
 
@@ -41,7 +41,7 @@ test("logging in with the right password opens the panel and keeps the cookie pr
   context,
 }) => {
   await page.goto("/admin/moderation")
-  await page.getByLabel("Contraseña").fill(ADMIN_PASSWORD)
+  await page.getByLabel("Contraseña", { exact: true }).fill(ADMIN_PASSWORD)
   await submit(page, "Entrar", "/admin/login")
 
   await expect(page).toHaveURL(/\/admin\/moderation$/)

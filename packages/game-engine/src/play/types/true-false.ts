@@ -18,24 +18,30 @@ import { baseSettingsSchema } from "../../settings.js"
 /** One option of a round: the thing the player can pick. */
 export const trueFalseContentSchema = z.object({
   /** Shown to the player as an option and as the prompt caption. */
-  label,
+  label: label.meta({ title: "Etiqueta" }),
   /** Media for this option — shown when the item is the prompt. */
-  mediaUrl,
-  description: longText.optional(),
+  mediaUrl: mediaUrl.meta({ title: "Imagen" }),
+  description: longText.optional().meta({ title: "Descripción" }),
   /** Only items flagged here can become the shown prompt. */
-  isCorrectPool: z.boolean().default(true),
+  isCorrectPool: z
+    .boolean()
+    .default(true)
+    .meta({ title: "Puede ser pregunta" }),
   /**
    * Optional explicit key used by expert mode to bind this item to a dictionary
    * entry. Falls back to `label` when absent.
    */
-  answerKey: label.optional(),
+  answerKey: label.optional().meta({ title: "Clave de respuesta" }),
 })
 
 export type TrueFalseContent = z.infer<typeof trueFalseContentSchema>
 
 /** Classic = multiple choice. Expert = autocomplete against the dictionary. */
 export const trueFalseSettingsSchema = baseSettingsSchema.extend({
-  answerMode: z.enum(["classic", "expert"]).default("classic"),
+  answerMode: z
+    .enum(["classic", "expert"])
+    .default("classic")
+    .meta({ title: "Modo de respuesta" }),
 })
 
 export type TrueFalseSettings = z.infer<typeof trueFalseSettingsSchema>

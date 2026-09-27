@@ -11,6 +11,8 @@ import {
   useLocation,
 } from "react-router"
 
+import { PasswordInput } from "@/components/password-input"
+
 import {
   LOGIN_PATH,
   adminConfigFromEnv,
@@ -135,10 +137,9 @@ export default function AdminLogin() {
           <label className="text-sm font-medium" htmlFor="password">
             Contraseña
           </label>
-          <Input
+          <PasswordInput
             id="password"
             name="password"
-            type="password"
             size="lg"
             autoComplete="current-password"
             required

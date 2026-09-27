@@ -19,21 +19,41 @@ const inputVariants = cva(
 )
 
 type InputProps = Omit<React.ComponentProps<"input">, "size"> &
-  VariantProps<typeof inputVariants>
+  VariantProps<typeof inputVariants> & {
+    /** Element rendered inside the input, anchored to the right edge. */
+    rightIcon?: React.ReactNode
+  }
 
 function Input({
   className,
   size = "default",
   type = "text",
+  rightIcon,
   ...props
 }: InputProps) {
+  if (!rightIcon) {
+    return (
+      <input
+        data-slot="input"
+        type={type}
+        className={cn(inputVariants({ size, className }))}
+        {...props}
+      />
+    )
+  }
+
   return (
-    <input
-      data-slot="input"
-      type={type}
-      className={cn(inputVariants({ size, className }))}
-      {...props}
-    />
+    <div data-slot="input-wrapper" className="relative">
+      <input
+        data-slot="input"
+        type={type}
+        className={cn(inputVariants({ size, className }), "pr-10")}
+        {...props}
+      />
+      <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground [&_button]:pointer-events-auto">
+        {rightIcon}
+      </span>
+    </div>
   )
 }
 

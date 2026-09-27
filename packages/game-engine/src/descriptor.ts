@@ -74,8 +74,32 @@ function literalOptions(node: JsonSchemaNode): FieldOption[] | null {
   if (!values.every((value) => typeof value === "string")) return null
   return (values as string[]).map((value) => ({
     value,
-    label: humanize(value),
+    label: engineOptionLabel(value) ?? humanize(value),
   }))
+}
+
+/**
+ * Spanish labels for the engine's own option values (answer and play modes).
+ * These name engine concepts, never content, so the panel stays Spanish
+ * without teaching it about any game type.
+ */
+function engineOptionLabel(value: string): string | null {
+  switch (value) {
+    case "classic":
+      return "Clásico"
+    case "expert":
+      return "Experto"
+    case "solo":
+      return "Solo"
+    case "online":
+      return "En línea"
+    case "coop":
+      return "Cooperativo"
+    case "practice":
+      return "Práctica"
+    default:
+      return null
+  }
 }
 
 /** Zod 4 narrows unions of literals into `anyOf`, so read those too. */

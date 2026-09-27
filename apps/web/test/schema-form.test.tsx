@@ -58,8 +58,8 @@ describe("SchemaForm", () => {
   it("renders one control per field of the game type schema", () => {
     renderForm()
 
-    expect(screen.getByLabelText(/label/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/media url/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/is correct pool/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/etiqueta/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/imagen/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/puede ser pregunta/i)).toBeInTheDocument()
   })
 })

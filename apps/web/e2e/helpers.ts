@@ -1,7 +1,7 @@
 import { expect, type Page } from "@playwright/test"
 
 /** Matches the development default in `wrangler.jsonc`, which e2e runs with. */
-export const ADMIN_PASSWORD = "playloop-dev"
+export const ADMIN_PASSWORD = "playloop-dev" // Only e2e tests password, not for production
 
 export type ItemSpec = {
   label: string
@@ -50,7 +50,7 @@ export async function loginAsOperator(page: Page): Promise<void> {
   await page.goto("/admin")
   await expect(page.getByRole("heading", { name: "Panel" })).toBeVisible()
 
-  await page.getByLabel("Contraseña").fill(ADMIN_PASSWORD)
+  await page.getByLabel("Contraseña", { exact: true }).fill(ADMIN_PASSWORD)
   await submit(page, "Entrar", "/admin/login")
 
   await expect(page).toHaveURL(/\/admin$/)

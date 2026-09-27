@@ -84,6 +84,25 @@ describe("describeObject", () => {
     expect(describeObject(z.string()).partial).toBe(true)
   })
 
+  it("labels fields and options in Spanish for the panel", () => {
+    const { fields } = describeObject(trueFalseSettingsSchema)
+    const byName = Object.fromEntries(
+      fields.map((field) => [field.name, field])
+    )
+
+    expect(byName.lives?.label).toBe("Vidas")
+    expect(byName.answerMode?.label).toBe("Modo de respuesta")
+    expect(byName.answerMode?.options?.map((option) => option.label)).toEqual([
+      "Clásico",
+      "Experto",
+    ])
+    // Values stay English: only the visible labels are translated.
+    expect(byName.answerMode?.options?.map((option) => option.value)).toEqual([
+      "classic",
+      "expert",
+    ])
+  })
+
   it("humanises field names for labels", () => {
     const { fields } = describeObject(
       z.object({ isCorrectPool: z.boolean().default(true) })

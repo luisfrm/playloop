@@ -3,6 +3,8 @@ import { Input } from "@playloop/ui/components/input"
 import { Logo } from "@playloop/ui/components/logo"
 import { data, Form, redirect, useActionData } from "react-router"
 
+import { PasswordInput } from "@/components/password-input"
+
 import {
   LOGIN_PATH,
   adminConfigFromEnv,
@@ -92,10 +94,9 @@ export default function Init() {
           <label className="text-sm font-medium" htmlFor="password">
             Contraseña
           </label>
-          <Input
+          <PasswordInput
             id="password"
             name="password"
-            type="password"
             size="lg"
             autoComplete="new-password"
             required
@@ -106,10 +107,9 @@ export default function Init() {
           <label className="text-sm font-medium" htmlFor="repeat">
             Repite la contraseña
           </label>
-          <Input
+          <PasswordInput
             id="repeat"
             name="repeat"
-            type="password"
             size="lg"
             autoComplete="new-password"
             required
