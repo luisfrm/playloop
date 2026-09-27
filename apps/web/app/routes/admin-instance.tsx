@@ -129,13 +129,13 @@ export default function AdminInstance() {
             <Badge accent="lavender">{loaderData.instance.gameTypeKey}</Badge>
           </div>
           <p className="mt-1 font-label text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
-            /juego/{loaderData.instance.slug}
+            /game/{loaderData.instance.slug}
           </p>
         </div>
         <Button
           variant="outline"
           size="lg"
-          render={<Link to={`/juego/${loaderData.instance.slug}`} />}
+          render={<Link to={`/game/${loaderData.instance.slug}`} />}
         >
           Ver juego
         </Button>

@@ -4,6 +4,7 @@ import { Logo } from "@playloop/ui/components/logo"
 import { TriangleAlert } from "lucide-react"
 import {
   Form,
+  Link,
   data,
   redirect,
   useActionData,
@@ -12,15 +13,16 @@ import {
 } from "react-router"
 
 import {
+  LOGIN_PATH,
   adminConfigFromEnv,
   adminCookieForRequest,
   checkAdminPassword,
   clearAdminCookie,
   createAdminToken,
   isAdmin,
-  LOGIN_PATH,
 } from "@/lib/admin-auth.server"
-import { getEnv } from "@/lib/repository.server"
+import { readAdminUser, verifyStoredUser } from "@/lib/admin-user.server"
+import { getEnv, getRepository } from "@/lib/repository.server"
 
 import type { Route } from "./+types/admin-login"
 
@@ -41,7 +43,12 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     )
   }
 
-  return { usingDevDefaults: config.usingDevDefaults }
+  const user = await readAdminUser(await getRepository(context))
+  return {
+    usingDevDefaults: config.usingDevDefaults,
+    hasUser: user !== null,
+    username: user?.username ?? "admin",
+  }
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
@@ -54,9 +61,17 @@ export async function action({ request, context }: Route.ActionArgs) {
     })
   }
 
+  const username = String(form.get("username") ?? "")
   const password = String(form.get("password") ?? "")
-  if (!(await checkAdminPassword(config, password))) {
-    return data({ error: "Contraseña incorrecta." }, { status: 401 })
+
+  // The stored user first; `ADMIN_PASSWORD` stays valid as the master
+  // credential, which is also the way in before `/init` has ever run.
+  const known = await verifyStoredUser(await getRepository(context), {
+    username,
+    password,
+  })
+  if (!known && !(await checkAdminPassword(config, password))) {
+    return data({ error: "Usuario o contraseña incorrectos." }, { status: 401 })
   }
 
   return redirect(safeRedirectTo(String(form.get("redirectTo") ?? "")), {
@@ -70,7 +85,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 }
 
 export default function AdminLogin() {
-  const { usingDevDefaults } = useLoaderData<typeof loader>()
+  const { usingDevDefaults, hasUser, username } = useLoaderData<typeof loader>()
   const result = useActionData<typeof action>()
   const location = useLocation()
   const redirectTo =
@@ -104,6 +119,21 @@ export default function AdminLogin() {
       <Form method="post" className="flex flex-col gap-4">
         <input type="hidden" name="redirectTo" value={redirectTo} />
         <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium" htmlFor="username">
+            Usuario
+          </label>
+          <Input
+            id="username"
+            name="username"
+            size="lg"
+            autoComplete="username"
+            defaultValue={username}
+            autoFocus
+            required
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium" htmlFor="password">
             Contraseña
           </label>
@@ -113,7 +143,6 @@ export default function AdminLogin() {
             type="password"
             size="lg"
             autoComplete="current-password"
-            autoFocus
             required
           />
         </div>
@@ -128,6 +157,16 @@ export default function AdminLogin() {
           Entrar
         </Button>
       </Form>
+
+      {hasUser ? null : (
+        <p className="text-center text-xs text-muted-foreground">
+          Primer arranque:{" "}
+          <Link className="underline" to="/init">
+            crea el usuario del panel
+          </Link>
+          .
+        </p>
+      )}
     </main>
   )
 }

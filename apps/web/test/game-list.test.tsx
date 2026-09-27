@@ -38,7 +38,7 @@ describe("GameList", () => {
 
     expect(
       screen.getByRole("link", { name: /Tema de prueba 1/ })
-    ).toHaveAttribute("href", "/juego/juego-1")
+    ).toHaveAttribute("href", "/game/juego-1")
   })
 
   it("marks expert-ready games so the catalogue communicates the mode", () => {

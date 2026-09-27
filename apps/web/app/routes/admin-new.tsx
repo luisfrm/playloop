@@ -77,7 +77,7 @@ export async function action({ request, context }: Route.ActionArgs) {
   // code registry has to be in place before an instance can be written.
   await ensureGameTypes(repository)
   await repository.saveInstance(instance)
-  return redirect(`/admin/juego/${instance.id}`)
+  return redirect(`/admin/games/${instance.id}`)
 }
 
 export default function AdminNew() {

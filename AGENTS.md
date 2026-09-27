@@ -55,10 +55,10 @@ packages/ui/           Componentes shadcn + variantes (cva). Sin lógica de nego
 
 - **Rutas**: mapa central en `apps/web/app/routes.ts`; los archivos viven en
   `apps/web/app/routes/`.
-  Públicas: `/`, `/juego/:slug`, `/practica/:slug`, `/sala/:code`,
-  `/ranking/:slug`. API: `/api/play`, `/api/upload-url`, `/api/offline/:slug`,
-  `/archivos/*` (sirve R2). Admin: `/admin/entrar`, `/admin`, `/admin/nuevo`,
-  `/admin/juego/:id`, `/admin/moderacion`.
+  Públicas: `/`, `/game/:slug`, `/practice/:slug`, `/room/:code`,
+  `/ranking/:slug`, `/init`. API: `/api/play`, `/api/upload-url`, `/api/offline/:slug`,
+  `/media/*` (sirve R2). Admin: `/admin/login`, `/admin`, `/admin/new`,
+  `/admin/games/:id`, `/admin/moderation`, `/admin/settings`.
 - **`app/lib/*.server.ts` es server-only** (D1, KV, R2, DO). Nunca lo importes
   desde un componente de cliente.
 - **Offline**: el service worker vive en `app/service-worker.ts` y lo construye
@@ -119,7 +119,10 @@ packages/ui/           Componentes shadcn + variantes (cva). Sin lógica de nego
 6. **Imágenes**: el panel pide un presign a `/api/upload-url`, el navegador sube
    directo a R2 y el Worker guarda la referencia en D1. No se proxyan bytes.
 7. **Nombre de jugador**: se valida al guardar (`checkName`) contra la lista de
-   términos bloqueados, con respaldo manual en `/admin/moderacion`.
+   términos bloqueados, con respaldo manual en `/admin/moderation`.
+8. **Autenticación del panel**: cookie HMAC (`ADMIN_SESSION_SECRET`); el
+   usuario se crea una vez en `/init` (PBKDF2 en `app_setting`) y `ADMIN_PASSWORD`
+   sigue siendo la credencial maestra. Todas las rutas son inglés.
 
 ---
 

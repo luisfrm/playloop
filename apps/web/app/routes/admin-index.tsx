@@ -56,7 +56,7 @@ export default function AdminIndex() {
             Cada instancia tiene su propio tipo, tema, contenido y diccionario.
           </p>
         </div>
-        <Button size="lg" render={<Link to="/admin/nuevo" />}>
+        <Button size="lg" render={<Link to="/admin/new" />}>
           Nuevo juego
         </Button>
       </header>
@@ -88,7 +88,7 @@ export default function AdminIndex() {
               <div className="flex min-w-0 flex-col gap-1">
                 <div className="flex min-w-0 flex-wrap items-center gap-2">
                   <Link
-                    to={`/admin/juego/${instance.id}`}
+                    to={`/admin/games/${instance.id}`}
                     className="min-w-0 truncate font-heading text-lg font-bold underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                   >
                     {instance.title}

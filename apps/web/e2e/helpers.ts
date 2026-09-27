@@ -51,7 +51,7 @@ export async function loginAsOperator(page: Page): Promise<void> {
   await expect(page.getByRole("heading", { name: "Panel" })).toBeVisible()
 
   await page.getByLabel("Contraseña").fill(ADMIN_PASSWORD)
-  await submit(page, "Entrar", "/admin/entrar")
+  await submit(page, "Entrar", "/admin/login")
 
   await expect(page).toHaveURL(/\/admin$/)
   await expect(page.getByRole("heading", { name: "Juegos" })).toBeVisible()
@@ -92,14 +92,14 @@ export async function publishGame(
   page: Page,
   spec: { title: string; slug: string; items: ItemSpec[] }
 ): Promise<void> {
-  await page.goto("/admin/nuevo")
+  await page.goto("/admin/new")
   await page.getByLabel("Título").fill(spec.title)
   await page.getByLabel("Slug").fill(spec.slug)
-  await submit(page, "Crear juego", "/admin/nuevo")
+  await submit(page, "Crear juego", "/admin/new")
 
   // Only after the router has actually moved: `page.url()` still points at the
   // form we just submitted while the navigation is in flight.
-  await expect(page).toHaveURL(/\/admin\/juego\/[0-9a-f-]+$/)
+  await expect(page).toHaveURL(/\/admin\/games\/[0-9a-f-]+$/)
   const instancePath = new URL(page.url()).pathname
 
   for (const [index, entry] of spec.items.entries()) {

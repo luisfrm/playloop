@@ -304,7 +304,7 @@ function Results(props: {
       <Standings members={props.standings} />
 
       <div className="flex flex-wrap gap-2 border-t pt-4">
-        <Button size="lg" render={<Link to={`/juego/${props.gameSlug}`} />}>
+        <Button size="lg" render={<Link to={`/game/${props.gameSlug}`} />}>
           Jugar este juego
         </Button>
         <Button

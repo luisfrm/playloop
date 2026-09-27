@@ -158,22 +158,22 @@ describe("the panel guard", () => {
     )
 
     const response = await redirectFrom(
-      requireAdmin(new Request("http://localhost/admin/juego/1"), undefined)
+      requireAdmin(new Request("http://localhost/admin/games/1"), undefined)
     )
 
     expect(response.status).toBe(302)
     expect(response.headers.get("Location")).toBe(
-      "/admin/entrar?redirectTo=%2Fadmin%2Fjuego%2F1"
+      "/admin/login?redirectTo=%2Fadmin%2Fgames%2F1"
     )
   })
 
   it("does not bounce the login page onto itself", async () => {
     const response = await redirectFrom(
-      requireAdmin(new Request("http://localhost/admin/entrar"), undefined)
+      requireAdmin(new Request("http://localhost/admin/login"), undefined)
     )
 
     expect(response.status).toBe(302)
-    expect(response.headers.get("Location")).toBe("/admin/entrar")
+    expect(response.headers.get("Location")).toBe("/admin/login")
   })
 
   it("ignores a cookie that was not signed by this deployment", async () => {

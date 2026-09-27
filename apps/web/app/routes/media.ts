@@ -2,7 +2,7 @@ import { data } from "react-router"
 
 import { getEnv } from "@/lib/repository.server"
 
-import type { Route } from "./+types/archivos"
+import type { Route } from "./+types/media"
 
 /**
  * The subset of `R2Bucket` we use. Declared locally so the app program does not
@@ -22,7 +22,7 @@ type R2BucketLike = {
  * Serves uploaded media straight from the `MEDIA` binding.
  *
  * This is what makes an upload usable without a public R2 domain: the panel
- * stores `/archivos/<objectKey>` and this route streams the object. When
+ * stores `/media/<objectKey>` and this route streams the object. When
  * `MEDIA_PUBLIC_BASE_URL` is configured the panel stores that URL instead, so
  * this route stays a fallback rather than the hot path.
  */

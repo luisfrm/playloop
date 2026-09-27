@@ -177,7 +177,7 @@ export default function Play() {
       return
     }
     setError(null)
-    await navigate(`/sala/${created.code}`)
+    await navigate(`/room/${created.code}`)
   }, [loaderData.slug, navigate, playerId, playerName])
 
   const expire = useCallback(async () => {
@@ -443,7 +443,7 @@ function StartPanel(props: {
           <Button
             variant="outline"
             size="lg"
-            render={<Link to={`/practica/${props.slug}`} />}
+            render={<Link to={`/practice/${props.slug}`} />}
           >
             Jugar sin conexión
           </Button>

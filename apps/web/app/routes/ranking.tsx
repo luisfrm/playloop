@@ -51,7 +51,7 @@ export default function Ranking() {
           <p className="mt-8 rounded-[var(--radius-lg)] border border-dashed p-10 text-center text-sm text-muted-foreground">
             Todavía no hay puntuaciones.{" "}
             {slug ? (
-              <Link className="underline" to={`/juego/${slug}`}>
+              <Link className="underline" to={`/game/${slug}`}>
                 Sé el primero
               </Link>
             ) : null}

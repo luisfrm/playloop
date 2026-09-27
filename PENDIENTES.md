@@ -1,8 +1,8 @@
 # Pendientes
 
 Lista de lo que falta por completar. Revisada el 2026-09-27 con
-`pnpm typecheck` (ok), `pnpm lint` (0 errores), `pnpm test` (239 pasos) y
-`pnpm --filter web test:e2e` (23 pasos, 0 fallos).
+`pnpm typecheck` (ok), `pnpm lint` (0 errores), `pnpm test` (248 pasos) y
+`pnpm --filter web test:e2e` (25 pasos, 0 fallos).
 
 ## Bug de producto
 
@@ -29,6 +29,14 @@ Lista de lo que falta por completar. Revisada el 2026-09-27 con
   lo hacía bien (`nextPracticeRound`). Ahora el motor no mueve el reloj al
   responder (`beginRound` lo hace al servir la ronda), la sesión queda en
   `awaitingNext` y el cliente pide `action: "next"` al pulsar Continuar.
+ 
+ 
+- [x] **16. Contraseña del panel y ruta `/init`.** La app respondía en
+  `/admin/login` y parte de los tests esperaban `/admin/entrar`; además el
+  logout apuntaba a una ruta que no existía. Unificado todo en
+  `/admin/login` (rutas siempre en inglés). Y `/init` crea el primer usuario
+  del panel (hash PBKDF2 en `app_setting`); `ADMIN_PASSWORD` sigue siendo la
+  credencial maestra para no bloquear nunca un despliegue.
  
 ## Tests
 
@@ -68,7 +76,7 @@ Lista de lo que falta por completar. Revisada el 2026-09-27 con
 - [x] **8. §12 — Sección "Configuración" del panel.** La tabla
   `app_setting` no la leía nadie. Nuevos `listSettings`/`saveSetting` en el
   repositorio (D1 y memoria), `app/lib/settings.ts` (valores, rangos y parseo
-  del formulario) y `/admin/configuracion` con su entrada en el sidebar. Los
+  del formulario) y `/admin/settings` con su entrada en el sidebar. Los
   límites que estaban en código pasan a ser datos: puestos del ranking,
   largo máximo del nombre (también en las salas) y partidas por minuto.
 - [x] **9. §5 — Importación de diccionario por archivo CSV.** Solo había un

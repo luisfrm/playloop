@@ -29,14 +29,14 @@ describe("Button", () => {
 
   it("can borrow another element through render", () => {
     render(
-      <Button render={<a href="/juego/tema-de-prueba" />}>
+      <Button render={<a href="/game/tema-de-prueba" />}>
         Jugar este juego
       </Button>
     )
 
     expect(
       screen.getByRole("link", { name: "Jugar este juego" })
-    ).toHaveAttribute("href", "/juego/tema-de-prueba")
+    ).toHaveAttribute("href", "/game/tema-de-prueba")
   })
 
   it("marks itself disabled when it cannot be used", () => {

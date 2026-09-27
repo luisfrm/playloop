@@ -104,7 +104,7 @@ export default function Practice() {
         <p className="text-sm text-muted-foreground">
           Este juego no está descargado en este dispositivo.
         </p>
-        <Button size="lg" render={<Link to={`/juego/${slug}`} />}>
+        <Button size="lg" render={<Link to={`/game/${slug}`} />}>
           Ver el juego
         </Button>
       </PracticeShell>

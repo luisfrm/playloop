@@ -23,7 +23,7 @@ test("a player answers rounds and ends up in the ranking", async ({ page }) => {
     items: ITEMS,
   })
 
-  await page.goto("/juego/partida-e2e")
+  await page.goto("/game/partida-e2e")
   await setPlayerName(page, "Ana")
   await page.getByRole("button", { name: "Empezar" }).click()
 
@@ -71,7 +71,7 @@ test("an unfinished game never reached the ranking", async ({ page }) => {
     items: ITEMS,
   })
 
-  await page.goto("/juego/ranking-vacio-e2e")
+  await page.goto("/game/ranking-vacio-e2e")
   await setPlayerName(page, "Bea")
   await page.getByRole("button", { name: "Empezar" }).click()
   await expect(page.getByText("Puntos", { exact: true })).toBeVisible()
@@ -102,7 +102,7 @@ test("the expert mode offers the dictionary instead of options", async ({
   await page.getByRole("button", { name: "Guardar ajustes" }).click()
   await expect(page.getByLabel("Modo experto")).toBeChecked()
 
-  await page.goto("/juego/modo-experto-e2e")
+  await page.goto("/game/modo-experto-e2e")
   await setPlayerName(page, "Ce")
   await page.getByRole("button", { name: "Experto" }).click()
   await page.getByRole("button", { name: "Empezar" }).click()

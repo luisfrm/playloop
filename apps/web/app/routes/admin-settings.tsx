@@ -12,7 +12,7 @@ import {
 } from "@/lib/settings"
 import { readSettings, writeSettings } from "@/lib/settings.server"
 
-import type { Route } from "./+types/admin-config"
+import type { Route } from "./+types/admin-settings"
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   await requireAdmin(request, context)

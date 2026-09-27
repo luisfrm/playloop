@@ -21,7 +21,7 @@ test("a downloaded game is playable with the network switched off", async ({
 
   // Realistic entry point, and the shell the service worker falls back to.
   await page.goto("/")
-  await page.goto("/juego/sin-conexion-e2e")
+  await page.goto("/game/sin-conexion-e2e")
   await page
     .getByRole("button", { name: "Descargar para jugar sin conexión" })
     .click()
@@ -32,7 +32,7 @@ test("a downloaded game is playable with the network switched off", async ({
   ).toBeVisible()
 
   await page.getByRole("link", { name: "Jugar sin conexión" }).click()
-  await expect(page).toHaveURL(/\/practica\/sin-conexion-e2e$/)
+  await expect(page).toHaveURL(/\/practice\/sin-conexion-e2e$/)
   await expect(page.getByText("Práctica sin conexión")).toBeVisible()
 
   // Nothing below this line may touch the server.
@@ -65,7 +65,7 @@ test("a game that was never downloaded says so instead of failing", async ({
     items: ITEMS,
   })
 
-  await page.goto("/practica/no-descargado-e2e")
+  await page.goto("/practice/no-descargado-e2e")
   await expect(
     page.getByText("Este juego no está descargado en este dispositivo.")
   ).toBeVisible()
@@ -79,7 +79,7 @@ test("the download can be removed again", async ({ page }) => {
     items: ITEMS,
   })
 
-  await page.goto("/juego/descarga-borrable-e2e")
+  await page.goto("/game/descarga-borrable-e2e")
   await page
     .getByRole("button", { name: "Descargar para jugar sin conexión" })
     .click()

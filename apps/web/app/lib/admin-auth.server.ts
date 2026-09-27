@@ -13,7 +13,7 @@ import { cloudflareContext, type CloudflareEnv } from "./cloudflare-context"
  */
 export const ADMIN_COOKIE = "playloop_admin"
 export const ADMIN_TTL_MS = 12 * 60 * 60 * 1000
-export const LOGIN_PATH = "/admin/entrar"
+export const LOGIN_PATH = "/admin/login"
 
 /**
  * Development defaults, so `pnpm dev` needs no setup. They are visible in

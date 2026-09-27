@@ -58,9 +58,9 @@ test("a blocked name never starts a game", async ({ page, request }) => {
     items: ITEMS,
   })
 
-  await page.goto("/admin/moderacion")
+  await page.goto("/admin/moderation")
   await page.locator('textarea[name="blockedTerms"]').fill("tonto")
-  await submit(page, "Guardar lista", "/admin/moderacion")
+  await submit(page, "Guardar lista", "/admin/moderation")
 
   const blocked = await request.post("/api/play", {
     data: {

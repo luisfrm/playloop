@@ -7,13 +7,13 @@ import type { CatalogueEntry } from "@/lib/catalogue"
 
 const ACCENTS = ["pear", "cyan", "coral", "mint", "lavender"] as const
 
-const TINTS: Record<(typeof ACCENTS)[number], string> = {
+const TINTS = {
   pear: "bg-primary/35 hover:bg-primary/60",
   cyan: "bg-accent-2/10 hover:bg-accent-2/25",
   coral: "bg-accent-3/10 hover:bg-accent-3/25",
   mint: "bg-mint/10 hover:bg-mint/25",
   lavender: "bg-lavender/10 hover:bg-lavender/25",
-}
+} as const satisfies Record<(typeof ACCENTS)[number], string>
 
 export type GameCardProps = {
   game: CatalogueEntry
@@ -24,18 +24,18 @@ export type GameCardProps = {
  * One catalogue tile. The whole card is the link — no nested interactive
  * elements — so keyboard and pointer get the same affordance.
  */
-export function GameCard({ game, index }: GameCardProps) {
+export function GameCard({ game, index }: Readonly<GameCardProps>) {
   const accent = ACCENTS[index % ACCENTS.length] ?? "pear"
 
   return (
     <li data-slot="game-card" className="min-w-0">
       <Link
-        to={`/juego/${game.slug}`}
+        to={`/game/${game.slug}`}
         className={[
           "group/game flex h-full min-w-0 flex-col gap-3 rounded-[var(--radius-lg)] border p-5",
           "transition-[transform,box-shadow,background-color] duration-[var(--dur-base)] ease-[var(--ease-spring)]",
           "hover:-translate-y-1 hover:shadow-[0_18px_44px_-20px_oklch(0.2_0.012_250/0.3)]",
-          "active:translate-y-0",
+          "transition-all duration-150 active:translate-y-0",
           "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
           TINTS[accent],
         ].join(" ")}

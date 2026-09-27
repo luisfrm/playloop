@@ -18,13 +18,13 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 const SECTIONS = [
   { to: "/admin", label: "Juegos", icon: LayoutGrid, end: true },
   {
-    to: "/admin/moderacion",
+    to: "/admin/moderation",
     label: "Ranking y moderación",
     icon: Shield,
     end: false,
   },
   {
-    to: "/admin/configuracion",
+    to: "/admin/settings",
     label: "Configuración",
     icon: Settings,
     end: false,
@@ -72,7 +72,7 @@ export default function AdminLayout() {
           </ul>
         </nav>
 
-        <Form method="post" action="/admin/entrar" className="px-3 pb-5">
+        <Form method="post" action="/admin/login" className="px-3 pb-5">
           <input type="hidden" name="intent" value="logout" />
           <button
             type="submit"

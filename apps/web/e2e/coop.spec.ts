@@ -17,13 +17,13 @@ const ITEMS = [
 ]
 
 /** Room codes avoid characters that are easy to confuse when read aloud. */
-const ROOM_URL = /\/sala\/[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]+$/
+const ROOM_URL = /\/room\/[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]+$/
 
 test("two players share one authoritative room", async ({ browser, page }) => {
   await loginAsOperator(page)
   await publishGame(page, { title: "Sala e2e", slug: "sala-e2e", items: ITEMS })
 
-  await page.goto("/juego/sala-e2e")
+  await page.goto("/game/sala-e2e")
   await setPlayerName(page, "Host")
   await page.getByRole("button", { name: "Jugar con amigos" }).click()
 
@@ -38,7 +38,7 @@ test("two players share one authoritative room", async ({ browser, page }) => {
   // common with the host.
   const guestContext = await browser.newContext()
   const guest = await guestContext.newPage()
-  await guest.goto(`/sala/${code}`)
+  await guest.goto(`/room/${code}`)
   await setNameInline(guest, "Invitada")
 
   await expect(page.getByText("2 en la sala")).toBeVisible()

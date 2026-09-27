@@ -55,7 +55,7 @@ describe("Home", () => {
 
     expect(
       await screen.findByRole("link", { name: /Tema de prueba/ })
-    ).toHaveAttribute("href", "/juego/tema-de-prueba")
+    ).toHaveAttribute("href", "/game/tema-de-prueba")
     expect(screen.getAllByRole("listitem").length).toBeGreaterThanOrEqual(2)
   })
 

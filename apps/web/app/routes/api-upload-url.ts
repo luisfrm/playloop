@@ -58,7 +58,7 @@ export async function action({ request, context }: Route.ActionArgs) {
         ...ticket,
         // What the panel must store on the content item. A configured public
         // base URL wins; otherwise the Worker serves the object itself.
-        mediaUrl: ticket.publicUrl ?? `/archivos/${ticket.objectKey}`,
+        mediaUrl: ticket.publicUrl ?? `/media/${ticket.objectKey}`,
       },
     })
   } catch (error) {
