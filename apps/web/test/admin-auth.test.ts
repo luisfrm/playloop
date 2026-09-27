@@ -23,6 +23,21 @@ function requestWithCookie(value: string | null, url = "http://localhost/admin")
   return new Request(url, { headers })
 }
 
+/**
+ * `requireAdmin` throws a `Response`, not an `Error`, so the rejection is
+ * caught as itself: `toMatchObject` cannot read a `Headers` instance, which
+ * exposes `Location` through `get()` rather than as a property.
+ */
+async function redirectFrom(promise: Promise<void>): Promise<Response> {
+  try {
+    await promise
+  } catch (thrown) {
+    expect(thrown).toBeInstanceOf(Response)
+    return thrown as Response
+  }
+  throw new Error("requireAdmin no lanzo ningun redirect")
+}
+
 describe("admin password", () => {
   it("accepts the configured password and rejects everything else", async () => {
     await expect(checkAdminPassword(devConfig, "playloop-dev")).resolves.toBe(
@@ -139,23 +154,23 @@ describe("the panel guard", () => {
       false
     )
 
-    await expect(
-      requireAdmin(
-        new Request("http://localhost/admin/juego/1"),
-        undefined
-      )
-    ).rejects.toMatchObject({
-      status: 302,
-      headers: expect.objectContaining({
-        Location: "/admin/entrar?redirectTo=%2Fadmin%2Fjuego%2F1",
-      }),
-    })
+    const response = await redirectFrom(
+      requireAdmin(new Request("http://localhost/admin/juego/1"), undefined)
+    )
+
+    expect(response.status).toBe(302)
+    expect(response.headers.get("Location")).toBe(
+      "/admin/entrar?redirectTo=%2Fadmin%2Fjuego%2F1"
+    )
   })
 
   it("does not bounce the login page onto itself", async () => {
-    await expect(
+    const response = await redirectFrom(
       requireAdmin(new Request("http://localhost/admin/entrar"), undefined)
-    ).rejects.toMatchObject({ headers: { Location: "/admin/entrar" } })
+    )
+
+    expect(response.status).toBe(302)
+    expect(response.headers.get("Location")).toBe("/admin/entrar")
   })
 
   it("ignores a cookie that was not signed by this deployment", async () => {
