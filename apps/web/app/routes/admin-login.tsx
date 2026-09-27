@@ -4,7 +4,6 @@ import { Logo } from "@playloop/ui/components/logo"
 import { TriangleAlert } from "lucide-react"
 import {
   Form,
-  Link,
   data,
   redirect,
   useActionData,
@@ -44,10 +43,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   }
 
   const user = await readAdminUser(await getRepository(context))
+  if (!user) throw redirect("/init")
   return {
     usingDevDefaults: config.usingDevDefaults,
-    hasUser: user !== null,
-    username: user?.username ?? "admin",
+    username: user.username,
   }
 }
 
@@ -83,9 +82,8 @@ export async function action({ request, context }: Route.ActionArgs) {
     },
   })
 }
-
 export default function AdminLogin() {
-  const { usingDevDefaults, hasUser, username } = useLoaderData<typeof loader>()
+  const { usingDevDefaults, username } = useLoaderData<typeof loader>()
   const result = useActionData<typeof action>()
   const location = useLocation()
   const redirectTo =
@@ -157,16 +155,6 @@ export default function AdminLogin() {
           Entrar
         </Button>
       </Form>
-
-      {hasUser ? null : (
-        <p className="text-center text-xs text-muted-foreground">
-          Primer arranque:{" "}
-          <Link className="underline" to="/init">
-            crea el usuario del panel
-          </Link>
-          .
-        </p>
-      )}
     </main>
   )
 }

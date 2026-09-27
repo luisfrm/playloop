@@ -124,6 +124,8 @@ packages/ui/           Componentes shadcn + variantes (cva). Sin lógica de nego
    usuario se crea una vez en `/init` (PBKDF2 en `app_setting`) y `ADMIN_PASSWORD`
    sigue siendo la credencial maestra. Todas las rutas son inglés.
 
+Sin operador, el login redirige a `/init`; `prepare-db.mjs` siembra el operador `admin` para el e2e.
+
 ---
 
 ## Despliegue

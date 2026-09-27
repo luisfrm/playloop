@@ -7,6 +7,7 @@
  * can see what an earlier run left behind.
  */
 import { execFileSync } from "node:child_process"
+import { webcrypto } from "node:crypto"
 import { rmSync } from "node:fs"
 import { createRequire } from "node:module"
 import path from "node:path"
@@ -42,3 +43,57 @@ execFileSync(
 )
 
 console.log(`[e2e] local D1 ready at ${stateDir}`)
+
+// The login bounces to /init while no operator exists, which would send every
+// spec there. Seed one instead: username "admin", password "playloop-dev".
+// Both auth paths accept it (stored user and master password), so helpers stay
+// untouched and the seeded-row case is what every spec exercises.
+const ITERATIONS = 210_000
+const SALT_BYTES = 16
+const KEY_BITS = 256
+
+function toBase64(bytes) {
+  return Buffer.from(bytes).toString("base64")
+}
+
+async function hashPassword(password) {
+  const salt = webcrypto.getRandomValues(new Uint8Array(SALT_BYTES))
+  const material = await webcrypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(password),
+    "PBKDF2",
+    false,
+    ["deriveBits"]
+  )
+  const bits = await webcrypto.subtle.deriveBits(
+    { name: "PBKDF2", hash: "SHA-256", salt, iterations: ITERATIONS },
+    material,
+    KEY_BITS
+  )
+  return `pbkdf2$sha256$${ITERATIONS}$${toBase64(salt)}$${toBase64(new Uint8Array(bits))}`
+}
+
+const e2eNow = Date.now()
+const e2eUser = JSON.stringify({
+  username: "admin",
+  passwordHash: await hashPassword("playloop-dev"),
+  createdAt: e2eNow,
+}).replace(/'/g, "''")
+
+execFileSync(
+  process.execPath,
+  [
+    wrangler,
+    "d1",
+    "execute",
+    "playloop",
+    "--local",
+    "--persist-to",
+    stateDir,
+    "--command",
+    `INSERT INTO app_setting (key, value_json, updated_at) VALUES ('admin.user', '${e2eUser}', ${e2eNow})`,
+  ],
+  { cwd: appDir, stdio: "inherit" }
+)
+
+console.log("[e2e] operator seeded")

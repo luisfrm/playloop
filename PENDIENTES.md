@@ -37,7 +37,8 @@ Lista de lo que falta por completar. Revisada el 2026-09-27 con
   `/admin/login` (rutas siempre en inglés). Y `/init` crea el primer usuario
   del panel (hash PBKDF2 en `app_setting`); `ADMIN_PASSWORD` sigue siendo la
   credencial maestra para no bloquear nunca un despliegue.
- 
+- [x] **17. Login redirige a `/init` sin operador.** El texto de primer arranque sale del login; el loader redirige a `/init` cuando `app_setting` no tiene usuario y se queda en login en caso contrario. `prepare-db.mjs` siembra el operador `admin` para el e2e, `panel-init.spec.ts` solo afirma el redirect con usuario, y hay unit tests del loader en `test/admin-login.test.ts`.
+
 ## Tests
 
 - [x] **2. Unit: `apps/web/test/admin-auth.test.ts`.** El matcher
