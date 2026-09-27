@@ -1,0 +1,274 @@
+/* Hallmark · genre: playful · macrostructure: Catalogue · theme: Hum
+ * nav: N1b SaaS three-section · footer: Ft8 Marquee scroll · enrichment: none
+ * Paper band: light (cream 97%) · Display: rounded-sans (Outfit) · Accent hue: multi (pear 95 · cyan 235 · coral 18)
+ * Pre-flight: preserved Outfit stack + shadcn token names. Introduced: multi-accent tokens, Hum radii, Hum easings.
+ */
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/outfit";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/jetbrains-mono";
+
+@custom-variant dark (&:is(.dark *));
+@source "../../../apps/**/*.{ts,tsx}";
+@source "../../../components/**/*.{ts,tsx}";
+@source "../**/*.{ts,tsx}";
+
+:root {
+    /* Volt · ink (dark blue-black, never pure black) is the one and only default theme */
+    --background: oklch(0.16 0.035 258);
+    --foreground: oklch(0.95 0.02 250);
+ 
+    --card: oklch(0.21 0.04 258);
+    --card-foreground: oklch(0.95 0.02 250);
+    --popover: oklch(0.26 0.045 258);
+    --popover-foreground: oklch(0.95 0.02 250);
+ 
+    /* Vivid blue owns the primary action surface */
+    --primary: oklch(0.62 0.2 262);
+    --primary-foreground: oklch(0.98 0.01 250);
+    --primary-deep: oklch(0.48 0.19 262);
+    --primary-cast: oklch(0.62 0.2 262 / 0.45);
+ 
+    --secondary: oklch(0.27 0.035 258);
+    --secondary-foreground: oklch(0.95 0.02 250);
+ 
+    --muted: oklch(0.24 0.03 258);
+    --muted-foreground: oklch(0.68 0.035 258);
+ 
+    /* Cyan owns hover/highlight — a second, distinct blue, not a repeat of primary */
+    --accent: oklch(0.78 0.14 210);
+    --accent-foreground: oklch(0.18 0.03 258);
+ 
+    /* Semantic feedback lives outside the blue family on purpose (game state, not brand) */
+    --success: oklch(0.78 0.15 165);
+    --success-foreground: oklch(0.18 0.03 258);
+    --warning: oklch(0.8 0.15 80);
+    --warning-foreground: oklch(0.18 0.03 258);
+    --destructive: oklch(0.66 0.21 18);
+    --destructive-foreground: oklch(0.98 0.01 250);
+ 
+    /* Volt · borders are a blue-tinted alpha overlay in three weights, not one flat gray line */
+    --border-subtle: oklch(0.85 0.05 258 / 10%);
+    --border: oklch(0.85 0.06 258 / 16%);
+    --border-strong: oklch(0.85 0.08 258 / 28%);
+    --input: oklch(0.85 0.06 258 / 20%);
+    --ring: oklch(0.62 0.2 262);
+ 
+    --chart-1: var(--primary);
+    --chart-2: var(--accent);
+    --chart-3: var(--success);
+    --chart-4: var(--warning);
+    --chart-5: var(--destructive);
+ 
+    /* Volt · radius is assigned by role, not repeated everywhere — see @theme inline below.
+       --radius-pill lives only in @theme inline (not here) to avoid a self-referencing
+       custom property when Tailwind emits it. */
+    --radius: 0.75rem;
+ 
+    /* Motion stack unchanged (CSS-only project) */
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-snap: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-out: cubic-bezier(0.2, 0.7, 0.3, 1);
+    --dur-fast: 140ms;
+    --dur-base: 220ms;
+    --dur-slow: 600ms;
+ 
+    --sidebar: oklch(0.19 0.035 258);
+    --sidebar-foreground: oklch(0.95 0.02 250);
+    --sidebar-primary: var(--primary);
+    --sidebar-primary-foreground: var(--primary-foreground);
+    --sidebar-accent: oklch(0.24 0.04 258);
+    --sidebar-accent-foreground: oklch(0.95 0.02 250);
+    --sidebar-border: oklch(0.85 0.06 258 / 14%);
+    --sidebar-ring: var(--primary);
+}
+ 
+/* Kept for shadcn's convention and a future light theme, but Volt ships dark-only:
+   the values are identical to :root — there is no separate "dark mode" to toggle yet. */
+.dark {
+    --background: oklch(0.16 0.035 258);
+    --foreground: oklch(0.95 0.02 250);
+    --card: oklch(0.21 0.04 258);
+    --card-foreground: oklch(0.95 0.02 250);
+    --popover: oklch(0.26 0.045 258);
+    --popover-foreground: oklch(0.95 0.02 250);
+    --primary: oklch(0.62 0.2 262);
+    --primary-foreground: oklch(0.98 0.01 250);
+    --primary-deep: oklch(0.48 0.19 262);
+    --primary-cast: oklch(0.62 0.2 262 / 0.45);
+    --secondary: oklch(0.27 0.035 258);
+    --secondary-foreground: oklch(0.95 0.02 250);
+    --muted: oklch(0.24 0.03 258);
+    --muted-foreground: oklch(0.68 0.035 258);
+    --accent: oklch(0.78 0.14 210);
+    --accent-foreground: oklch(0.18 0.03 258);
+    --success: oklch(0.78 0.15 165);
+    --success-foreground: oklch(0.18 0.03 258);
+    --warning: oklch(0.8 0.15 80);
+    --warning-foreground: oklch(0.18 0.03 258);
+    --destructive: oklch(0.66 0.21 18);
+    --destructive-foreground: oklch(0.98 0.01 250);
+    --border-subtle: oklch(0.85 0.05 258 / 10%);
+    --border: oklch(0.85 0.06 258 / 16%);
+    --border-strong: oklch(0.85 0.08 258 / 28%);
+    --input: oklch(0.85 0.06 258 / 20%);
+    --ring: oklch(0.62 0.2 262);
+    --sidebar: oklch(0.19 0.035 258);
+    --sidebar-foreground: oklch(0.95 0.02 250);
+    --sidebar-primary: var(--primary);
+    --sidebar-primary-foreground: var(--primary-foreground);
+    --sidebar-accent: oklch(0.24 0.04 258);
+    --sidebar-accent-foreground: oklch(0.95 0.02 250);
+    --sidebar-border: oklch(0.85 0.06 258 / 14%);
+    --sidebar-ring: var(--primary);
+}
+ 
+@theme inline {
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary-deep: var(--primary-deep);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-success: var(--success);
+    --color-success-foreground: var(--success-foreground);
+    --color-warning: var(--warning);
+    --color-warning-foreground: var(--warning-foreground);
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+    --color-border-subtle: var(--border-subtle);
+    --color-border: var(--border);
+    --color-border-strong: var(--border-strong);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+ 
+    /* Volt · radius by role — pill is intentionally NOT part of this scale.
+       sm  -> inputs, small chips
+       md  -> secondary controls
+       lg  -> default cards (game cards, panels)          == var(--radius)
+       xl  -> modals, popovers, dropdowns
+       2xl -> hero / featured cards
+       pill (--radius-pill) -> buttons, badges, vidas/timer chips, room-code pill */
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.3);
+    --radius-2xl: calc(var(--radius) * 1.6);
+    --radius-pill: 9999px;
+ 
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+ 
+    --font-sans: "Inter Variable", "Inter", system-ui, sans-serif;
+    --font-heading: "Space Grotesk Variable", "Space Grotesk", system-ui, sans-serif;
+ 
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-snap: cubic-bezier(0.22, 1, 0.36, 1);
+}
+ 
+@layer base {
+    * {
+        @apply border-border outline-ring/50;
+    }
+    html,
+    body {
+        overflow-x: clip;
+    }
+    body {
+        @apply bg-background text-foreground font-sans;
+        font-variant-numeric: tabular-nums;
+    }
+    h1,
+    h2,
+    h3,
+    h4 {
+        @apply font-heading;
+    }
+    /* Volt · emphasis follows the text across line breaks — cyan tint, not brand blue,
+       so an inline highlight never reads as a button or an active state. */
+    em,
+    .hl {
+        color: inherit;
+        font-style: normal;
+        background-image: linear-gradient(var(--hl, oklch(0.78 0.14 210 / 0.35)) 0 0);
+        background-repeat: no-repeat;
+        background-size: 100% 0.32em;
+        background-position: 0 82%;
+        -webkit-box-decoration-break: clone;
+        box-decoration-break: clone;
+        padding-bottom: 0.02em;
+    }
+}
+ 
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+ 
+/* Volt · the character moment pulses at rest, one mark per page. */
+@keyframes playloop-pulse {
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 0.85;
+    }
+    50% {
+        transform: scale(1.18);
+        opacity: 1;
+    }
+}
+ 
+/* Volt · fires once on a correct answer, then dies — tied to --success, not the brand blue,
+   so it reads as game feedback, not as a UI accent. */
+@keyframes playloop-star-burst {
+    0% {
+        transform: scale(0) rotate(0deg);
+        opacity: 1;
+    }
+    60% {
+        transform: scale(1.2) rotate(35deg);
+        opacity: 0.9;
+    }
+    100% {
+        transform: scale(1.4) rotate(45deg);
+        opacity: 0;
+    }
+}
+ 
+/* Volt · footer marquee (Ft8) — transform only, honours reduced motion. */
+@keyframes playloop-marquee {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-50%);
+    }
+}
