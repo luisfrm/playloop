@@ -74,9 +74,11 @@ Lista de lo que falta por completar. Revisada el 2026-09-27 con
 
 ## Infraestructura y repo
 
-- [ ] **11. Despliegue.** `apps/web/wrangler.jsonc` con placeholders
-  `REPLACE_WITH_D1_ID` / `REPLACE_WITH_KV_ID`; faltan los secrets
-  (`R2_*`, `ADMIN_*`).
+- [ ] **11. Despliegue.** Falta crear los recursos de verdad (D1, KV, R2) y
+  poner los seis secretos; los placeholders `REPLACE_WITH_D1_ID` /
+  `REPLACE_WITH_KV_ID` siguen ahí a propósito. Listo en el repo:
+  `migrations_dir` apuntando a `packages/db/migrations`, los scripts
+  `deploy:migrate` y `db:migrate:local`, y el checklist de AGENTS.md.
 - [x] **12. `apps/web/Dockerfile`.** Usaba `npm ci` y `npm run start` en un
   repo pnpm (no hay `package-lock.json` ni script `start`) y su artefacto
   era un bundle de Workers, que no arranca en Node. Eliminado junto a

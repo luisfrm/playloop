@@ -9,7 +9,13 @@
   "observability": { "enabled": true },
 
   "d1_databases": [
-    { "binding": "DB", "database_name": "playloop", "database_id": "REPLACE_WITH_D1_ID" }
+    {
+      "binding": "DB",
+      "database_name": "playloop",
+      "database_id": "REPLACE_WITH_D1_ID",
+      // Relative to this file: the SQL lives with the rest of the data layer.
+      "migrations_dir": "../../packages/db/migrations"
+    }
   ],
 
   "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "playloop-media" }],

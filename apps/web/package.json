@@ -8,6 +8,8 @@
     "build": "react-router build",
     "preview": "react-router build && vite preview",
     "deploy": "react-router build && wrangler deploy",
+    "deploy:migrate": "wrangler d1 migrations apply playloop --remote",
+    "db:migrate:local": "wrangler d1 execute playloop --local --file ../../packages/db/migrations/0000_init.sql",
     "cf-typegen": "wrangler types workers/worker-configuration.d.ts",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "test": "vitest run",

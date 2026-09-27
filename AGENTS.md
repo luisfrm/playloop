@@ -120,6 +120,23 @@ packages/ui/           Componentes shadcn + variantes (cva). Sin lógica de nego
 
 ---
 
+## Despliegue
+
+`pnpm --filter web deploy` construye con el plugin de Cloudflare y llama a
+`wrangler deploy`. Una vez por cuenta, antes del primer despliegue:
+
+1. `wrangler d1 create playloop` y pegar el `database_id` en
+   `apps/web/wrangler.jsonc` (hoy pone `REPLACE_WITH_D1_ID`).
+2. `wrangler kv namespace create CACHE` y pegar el `id`
+   (`REPLACE_WITH_KV_ID`).
+3. `wrangler r2 bucket create playloop-media`.
+4. `pnpm --filter web deploy:migrate` aplica `packages/db/migrations` a la D1
+   remota (`db:migrate:local` hace lo mismo en local, con `--file`).
+5. `wrangler secret put` para `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET` y los
+   cuatro `R2_*` (endpoint S3, bucket y credenciales).
+
+Mientras sigan los valores de desarrollo, el login del panel lo avisa.
+
 ## Estilo de código y UI
 
 - `lucide-react` para iconos; nunca `react-icons`.
