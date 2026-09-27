@@ -12,6 +12,7 @@ import { useState } from "react"
 import { Form, Link, data, useLoaderData, useNavigation } from "react-router"
 
 import { requireAdmin } from "@/lib/admin-auth.server"
+import { DictionaryImport } from "@/components/dictionary-import"
 import { MediaUpload } from "@/components/media-upload"
 import { SchemaForm } from "@/components/schema-form"
 import { isR2Configured, r2ConfigFromEnv } from "@/lib/r2-presign.server"
@@ -173,6 +174,9 @@ export default function AdminInstance() {
   )
   const [content, setContent] = useState<Record<string, unknown>[]>(
     loaderData.content.map(asRecord)
+  )
+  const [dictionaryText, setDictionaryText] = useState(
+    loaderData.dictionaryText
   )
 
   const canEnableExpert = loaderData.dictionaryText.trim().length > 0
@@ -382,10 +386,12 @@ export default function AdminInstance() {
         <textarea
           name="dictionaryText"
           rows={8}
-          defaultValue={loaderData.dictionaryText}
+          value={dictionaryText}
+          onChange={(event) => setDictionaryText(event.target.value)}
           className="w-full rounded-[var(--radius-md)] border bg-card px-3.5 py-2 font-mono text-sm"
           placeholder={"Elemento Uno | Uno | 1\nElemento Dos"}
         />
+        <DictionaryImport onLoaded={setDictionaryText} />
         <Button type="submit" size="lg" disabled={busy}>
           Guardar diccionario
         </Button>

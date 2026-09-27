@@ -52,9 +52,11 @@ Lista de lo que falta por completar. Revisada el 2026-09-27 con
   disclosure del TopNav y hay que clicar.
 - [ ] **8. §12 — Sección "Configuración" del panel.** La tabla
   `app_setting` existe pero nadie la lee ni la escribe; no hay ruta.
-- [ ] **9. §5 — Importación de diccionario por archivo CSV.** Solo hay un
-  textarea; `parseDictionaryText` ya soporta el formato, falta el
-  `<input type="file">`.
+- [x] **9. §5 — Importación de diccionario por archivo CSV.** Solo había un
+  textarea; `parseDictionaryText` ya soportaba el formato. Añadido
+  `components/dictionary-import.tsx`: el archivo se copia al cuadro para
+  revisarlo y se guarda por el mismo camino de siempre. Cubierto con test
+  unitario y con un e2e que comprueba la entrada en D1 tras recargar.
 - [ ] **10. §2/§7 — PWA.** La spec pide `vite-plugin-pwa` + `idb`; hay un
   service worker artesanal (`apps/web/public/service-worker.js`) e
   IndexedDB cruda. Funciona: decidir si se migra o se documenta la
