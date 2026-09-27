@@ -1,7 +1,7 @@
 # Pendientes
 
 Lista de lo que falta por completar. Revisada el 2026-09-27 con
-`pnpm typecheck` (ok), `pnpm lint` (0 errores), `pnpm test` (217 pasos) y
+`pnpm typecheck` (ok), `pnpm lint` (0 errores), `pnpm test` (232 pasos) y
 `pnpm --filter web test:e2e` (22 pasos, 0 fallos).
 
 ## Bug de producto
@@ -77,8 +77,10 @@ Lista de lo que falta por completar. Revisada el 2026-09-27 con
   repo pnpm (no hay `package-lock.json` ni script `start`) y su artefacto
   era un bundle de Workers, que no arranca en Node. Eliminado junto a
   `.dockerignore`: la spec despliega con `wrangler deploy` (ver 11).
-- [ ] **13. Tests de `packages/ui`.** El paquete no tiene tests ni script
-  `test`.
+- [x] **13. Tests de `packages/ui`.** El paquete no tenía tests ni script
+  `test`. Añadidos `vitest.config.ts` (jsdom, alias `@playloop/ui`) y cinco
+  suites (`badge`, `button`, `card`, `input`, `logo`, 15 pasos) que cubren
+  variantes, slots y el `render` de base-ui.
 - [ ] **14. `DESIGN.md` vs `globals.css`.** Divergen en formato de tokens
   (HSL vs oklch), tipografías (Inter/Space Grotesk vs Outfit/Geist) y
   radios de botón (`rounded-full` vs `rounded-lg`).
