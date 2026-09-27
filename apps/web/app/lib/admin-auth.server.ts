@@ -2,7 +2,6 @@ import type { RouterContextProvider } from "react-router"
 import { redirect } from "react-router"
 
 import { cloudflareContext, type CloudflareEnv } from "./cloudflare-context"
-import { getSessionStore } from "./sessions.server"
 
 /**
  * Panel authentication.
@@ -15,10 +14,6 @@ import { getSessionStore } from "./sessions.server"
 export const ADMIN_COOKIE = "playloop_admin"
 export const ADMIN_TTL_MS = 12 * 60 * 60 * 1000
 export const LOGIN_PATH = "/admin/entrar"
-
-/** How many failed attempts one address may make before it is throttled. */
-const MAX_LOGIN_ATTEMPTS = 8
-const LOGIN_WINDOW_MS = 10 * 60 * 1000
 
 /**
  * Development defaults, so `pnpm dev` needs no setup. They are visible in
@@ -190,31 +185,3 @@ export async function guardApiAdmin(request: Request, context: unknown) {
 export function unauthorized() {
   return Response.json({ error: "No autorizado." }, { status: 401 })
 }
-
-/**
- * Best-effort throttle keyed by address, recorded in the same store as play
- * sessions. KV has no atomic increment, so a burst can slip by a few; it stops
- * scripts, it is not a quota.
- */
-export async function countLoginAttempt(
-  context: unknown,
-  request: Request
-): Promise<number> {
-  const address =
-    request.headers.get("cf-connecting-ip") ??
-    request.headers.get("x-forwarded-for") ??
-    "local"
-  return getSessionStore(context).countRecent(
-    `admin-login:${address}`,
-    LOGIN_WINDOW_MS
-  )
-}
-
-export function loginThrottled() {
-  return Response.json(
-    { error: "Demasiados intentos. Prueba de nuevo en unos minutos." },
-    { status: 429 }
-  )
-}
-
-export { MAX_LOGIN_ATTEMPTS }

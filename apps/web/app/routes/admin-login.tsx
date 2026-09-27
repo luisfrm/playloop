@@ -16,10 +16,8 @@ import {
   adminCookieForRequest,
   checkAdminPassword,
   clearAdminCookie,
-  countLoginAttempt,
   createAdminToken,
   isAdmin,
-  MAX_LOGIN_ATTEMPTS,
   LOGIN_PATH,
 } from "@/lib/admin-auth.server"
 import { getEnv } from "@/lib/repository.server"
@@ -52,13 +50,6 @@ export async function action({ request, context }: Route.ActionArgs) {
     return redirect(LOGIN_PATH, {
       headers: { "Set-Cookie": clearAdminCookie() },
     })
-  }
-
-  if ((await countLoginAttempt(context, request)) > MAX_LOGIN_ATTEMPTS) {
-    return data(
-      { error: "Demasiados intentos. Prueba de nuevo en unos minutos." },
-      { status: 429 }
-    )
   }
 
   const password = String(form.get("password") ?? "")
