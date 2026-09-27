@@ -1,8 +1,8 @@
 # Pendientes
 
 Lista de lo que falta por completar. Revisada el 2026-09-27 con
-`pnpm typecheck` (ok), `pnpm test` (2 fallos, ver 2) y
-`pnpm --filter web test:e2e` (10 fallos / 10 pasos: ver 3 y 4).
+`pnpm typecheck` (ok), `pnpm test` (210 pasos) y
+`pnpm --filter web test:e2e` (20 pasos, 0 fallos).
 
 ## Bug de producto
 
@@ -23,18 +23,25 @@ Lista de lo que falta por completar. Revisada el 2026-09-27 con
 
 ## Tests
 
-- [ ] **2. Unit: `apps/web/test/admin-auth.test.ts:147,158`.** El matcher
+- [x] **2. Unit: `apps/web/test/admin-auth.test.ts`.** El matcher
   `rejects.toMatchObject({ headers: { Location } })` no matchea contra una
-  instancia `Headers` (el redirect funciona bien; falla la aserción).
-- [ ] **3. E2E: `e2e/panel-auth.spec.ts` ("wrong password").** Usa
+  instancia `Headers` (el redirect funciona bien; fallaba la aserción).
+  Arreglado con un helper `redirectFrom` que atrapa la `Response` y afirma
+  sobre `status` y `headers.get("Location")`.
+- [x] **3. E2E: `e2e/panel-auth.spec.ts` ("wrong password").** Usaba
   `submit()`, que exige status < 400, pero la acción responde 401 a
-  propósito con la contraseña errónea: el test nunca puede pasar.
-- [ ] **4. E2E: throttle de login.** `MAX_LOGIN_ATTEMPTS = 8` por 10 min
-  por IP (`app/lib/admin-auth.server.ts:20`) y el suite completo hace ~15
-  logins desde la misma IP → 429 en cascada (9 de los 10 fallos actuales;
-  el décimo es el 3).
-- [ ] **5. E2E en verde.** Dejar `pnpm --filter web test:e2e` en 0 fallos
-  una vez resueltos 1, 3 y 4.
+  propósito con la contraseña errónea: el test nunca podía pasar.
+  `submit()` acepta ahora el status esperado y el test pide 401.
+- [x] **4. E2E: throttle de login.** `MAX_LOGIN_ATTEMPTS = 8` por 10 min
+  por IP hacía que los ~15 logins del suite compartieran 429 en cascada
+  (9 de los 10 fallos; el décimo era el 3). Quitado: la spec no lo pide y
+  el único respaldo del límite era el comentario del código.
+- [x] **5. E2E en verde.** `pnpm --filter web test:e2e` da 20/20. Además
+  `play.spec.ts` elegía la opción errónea de la lista completa de ítems,
+  cuando una ronda solo ofrece los que aún no se han preguntado
+  (`nextRound` filtra `askedIds`): esperaba un botón que no estaba en
+  pantalla y, mientras tanto, la ronda expiraba. La opción equivocada se
+  elige ahora de los botones visibles.
 
 ## Especificación (`INITIAL_PROMPT_IMPROVED.md`)
 
