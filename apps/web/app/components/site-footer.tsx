@@ -8,7 +8,7 @@ export function SiteFooter() {
   return (
     <footer data-slot="site-footer" className="mt-16 border-t bg-secondary/50">
       <div className="overflow-hidden py-5">
-        <div className="font-label flex w-max animate-[playloop-marquee_32s_linear_infinite] items-center gap-6 text-xs tracking-[0.14em] uppercase">
+        <div className="flex w-max animate-[playloop-marquee_32s_linear_infinite] items-center gap-6 font-label text-xs tracking-[0.14em] uppercase">
           {track.map((word, index) => (
             <span key={`${word}-${index}`} className="flex items-center gap-6">
               {word}

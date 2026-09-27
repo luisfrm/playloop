@@ -128,7 +128,7 @@ export default function AdminInstance() {
             </h1>
             <Badge accent="lavender">{loaderData.instance.gameTypeKey}</Badge>
           </div>
-          <p className="font-label mt-1 text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
+          <p className="mt-1 font-label text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
             /juego/{loaderData.instance.slug}
           </p>
         </div>

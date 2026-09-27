@@ -72,7 +72,7 @@ export function RoundPanel(props: {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <dl className="font-label flex flex-wrap gap-5 text-[11px] tracking-[0.08em] uppercase">
+        <dl className="flex flex-wrap gap-5 font-label text-[11px] tracking-[0.08em] uppercase">
           <Stat label="Puntos" value={view.stats.score} />
           <Stat label="Vidas" value={view.stats.lives} />
           <Stat label="Racha" value={view.stats.streak} />
@@ -182,7 +182,7 @@ export function FeedbackPanel(props: {
         <span
           aria-hidden="true"
           data-slot="star-burst"
-          className="bg-accent-3 pointer-events-none absolute top-6 right-6 size-6 animate-[playloop-star-burst_420ms_ease-out_forwards] [mask-image:linear-gradient(90deg,transparent_47%,black_47%_53%,transparent_53%),linear-gradient(0deg,transparent_47%,black_47%_53%,transparent_53%)]"
+          className="pointer-events-none absolute top-6 right-6 size-6 animate-[playloop-star-burst_420ms_ease-out_forwards] bg-accent-3 [mask-image:linear-gradient(90deg,transparent_47%,black_47%_53%,transparent_53%),linear-gradient(0deg,transparent_47%,black_47%_53%,transparent_53%)]"
         />
       ) : null}
 
@@ -200,7 +200,7 @@ export function FeedbackPanel(props: {
         </p>
       ) : null}
 
-      <dl className="font-label flex flex-wrap gap-5 text-[11px] tracking-[0.08em] uppercase">
+      <dl className="flex flex-wrap gap-5 font-label text-[11px] tracking-[0.08em] uppercase">
         <Stat label="Puntos" value={props.stats.score} />
         <Stat label="Vidas" value={props.stats.lives} />
         <Stat label="Ronda" value={props.stats.roundsPlayed} />

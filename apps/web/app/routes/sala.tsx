@@ -228,7 +228,7 @@ function QuestionPanel(props: {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <dl className="font-label flex flex-wrap gap-5 text-[11px] tracking-[0.08em] uppercase">
+        <dl className="flex flex-wrap gap-5 font-label text-[11px] tracking-[0.08em] uppercase">
           <Stat label="Pregunta" value={props.room.questionCount} />
           <Stat label="Han respondido" value={question.answeredBy.length} />
         </dl>
