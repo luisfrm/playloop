@@ -1,4 +1,5 @@
 import { Input } from "@playloop/ui/components/input"
+import { Select } from "@playloop/ui/components/select"
 import type { FieldDescriptor } from "@playloop/game-engine"
 
 export type FieldInputProps = {
@@ -57,9 +58,8 @@ export function FieldInput({ field, value, onChange }: FieldInputProps) {
     return (
       <div className="flex flex-col gap-1.5">
         {label}
-        <select
+        <Select
           id={id}
-          className="h-10 w-full rounded-[var(--radius-md)] border bg-card px-3.5 text-sm"
           value={asText(value)}
           aria-describedby={describedBy}
           onChange={(event) => onChange(event.target.value)}
@@ -69,7 +69,7 @@ export function FieldInput({ field, value, onChange }: FieldInputProps) {
               {option.label}
             </option>
           ))}
-        </select>
+        </Select>
         {hint}
       </div>
     )

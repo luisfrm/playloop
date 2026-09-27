@@ -1,5 +1,6 @@
 import { Button } from "@playloop/ui/components/button"
 import { Input } from "@playloop/ui/components/input"
+import { Select } from "@playloop/ui/components/select"
 import { gameTypes, themeSchema } from "@playloop/game-engine"
 import { useState } from "react"
 import {
@@ -128,10 +129,10 @@ export default function AdminNew() {
           <label className="text-sm font-medium" htmlFor="gameTypeKey">
             Tipo de juego
           </label>
-          <select
+          <Select
             id="gameTypeKey"
             name="gameTypeKey"
-            className="h-12 w-full rounded-[var(--radius-md)] border bg-card px-3.5 text-base"
+            size="lg"
             defaultValue={types[0]?.key}
           >
             {types.map((type) => (
@@ -139,7 +140,7 @@ export default function AdminNew() {
                 {type.label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div className="flex gap-2">

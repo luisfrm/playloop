@@ -60,6 +60,6 @@ describe("SchemaForm", () => {
 
     expect(screen.getByLabelText(/etiqueta/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/imagen/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/puede ser pregunta/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/aparece como pregunta/i)).toBeInTheDocument()
   })
 })

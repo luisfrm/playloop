@@ -217,6 +217,11 @@
     * {
         @apply border-border outline-ring/50;
     }
+    :root {
+        /* Volt ships dark-only: native controls (select dropdowns,
+           scrollbars, date pickers) must render dark, not light. */
+        color-scheme: dark;
+    }
     html,
     body {
         overflow-x: clip;
@@ -224,6 +229,24 @@
     body {
         @apply bg-background text-foreground font-sans;
         font-variant-numeric: tabular-nums;
+    }
+    /* Desktop dropdowns follow the theme; on mobile the OS still shows its
+       native option picker, which is what we want there. */
+    option,
+    optgroup {
+        background-color: var(--popover);
+        color: var(--popover-foreground);
+    }
+    /* Number inputs keep type="number" (mobile numeric keyboard) without the
+       desktop spinner steppers, which clash with the input padding. */
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    input[type="number"] {
+        -moz-appearance: textfield;
+        appearance: textfield;
     }
     h1,
     h2,

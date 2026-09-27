@@ -26,7 +26,7 @@ export const trueFalseContentSchema = z.object({
   isCorrectPool: z
     .boolean()
     .default(true)
-    .meta({ title: "Puede ser pregunta" }),
+    .meta({ title: "Aparece como pregunta" }),
   /**
    * Optional explicit key used by expert mode to bind this item to a dictionary
    * entry. Falls back to `label` when absent.
