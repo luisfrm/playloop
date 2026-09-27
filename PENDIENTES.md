@@ -1,7 +1,7 @@
 # Pendientes
 
 Lista de lo que falta por completar. Revisada el 2026-09-27 con
-`pnpm typecheck` (ok), `pnpm lint` (0 errores), `pnpm test` (237 pasos) y
+`pnpm typecheck` (ok), `pnpm lint` (0 errores), `pnpm test` (239 pasos) y
 `pnpm --filter web test:e2e` (23 pasos, 0 fallos).
 
 ## Bug de producto
@@ -76,10 +76,13 @@ Lista de lo que falta por completar. Revisada el 2026-09-27 con
   `components/dictionary-import.tsx`: el archivo se copia al cuadro para
   revisarlo y se guarda por el mismo camino de siempre. Cubierto con test
   unitario y con un e2e que comprueba la entrada en D1 tras recargar.
-- [ ] **10. §2/§7 — PWA.** La spec pide `vite-plugin-pwa` + `idb`; hay un
-  service worker artesanal (`apps/web/public/service-worker.js`) e
-  IndexedDB cruda. Funciona: decidir si se migra o se documenta la
-  desviación.
+- [x] **10. §2/§7 — PWA.** Migrado a lo que pide la spec:
+  `vite-plugin-pwa` en modo `injectManifest` con Workbox (el SW vive en
+  `app/service-worker.ts`: precache del shell y runtime cache de documentos y
+  media) e `idb` para IndexedDB. El service worker artesanal de `public/` se
+  elimina, y el registro pasa por `virtual:pwa-register` con `autoUpdate`. El
+  e2e offline ahora recarga la página sin red, que es lo que prueba de
+  verdad el service worker.
 
 ## Infraestructura y repo
 

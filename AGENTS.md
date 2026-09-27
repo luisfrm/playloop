@@ -61,6 +61,9 @@ packages/ui/           Componentes shadcn + variantes (cva). Sin lógica de nego
   `/admin/juego/:id`, `/admin/moderacion`.
 - **`app/lib/*.server.ts` es server-only** (D1, KV, R2, DO). Nunca lo importes
   desde un componente de cliente.
+- **Offline**: el service worker vive en `app/service-worker.ts` y lo construye
+  `vite-plugin-pwa` (Workbox, `injectManifest`); `public/manifest.webmanifest`
+  sigue siendo la fuente del manifest y el IndexedDB local se maneja con `idb`.
 - **Workers**: `workers/app.ts` es el entry (`wrangler.jsonc` → `main`);
   `workers/room-do.ts` es el Durable Object de salas; los bindings están
   declarados en `workers/env.ts`.

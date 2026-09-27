@@ -19,6 +19,8 @@ test("a downloaded game is playable with the network switched off", async ({
     items: ITEMS,
   })
 
+  // Realistic entry point, and the shell the service worker falls back to.
+  await page.goto("/")
   await page.goto("/juego/sin-conexion-e2e")
   await page
     .getByRole("button", { name: "Descargar para jugar sin conexión" })
@@ -35,6 +37,11 @@ test("a downloaded game is playable with the network switched off", async ({
 
   // Nothing below this line may touch the server.
   await page.context().setOffline(true)
+
+  // Reloading offline proves the shell comes from the service worker and the
+  // instance from IndexedDB, not from a page that was already open.
+  await page.reload()
+  await expect(page.getByRole("button", { name: "Empezar" })).toBeVisible()
 
   await page.getByRole("button", { name: "Empezar" }).click()
 

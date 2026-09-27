@@ -370,7 +370,10 @@ export async function serveNextRound(input: {
   // Asking twice (a reload, a double click) just returns the round on screen.
   if (!session.awaitingNext) {
     const { prompt, options } = await loadRoundParts(repository, session)
-    return { view: viewOf(session, definition, prompt, options), finished: false }
+    return {
+      view: viewOf(session, definition, prompt, options),
+      finished: false,
+    }
   }
 
   const now = Date.now()

@@ -1,3 +1,6 @@
+import { openDB, type DBSchema, type IDBPDatabase } from "idb"
+import { registerSW } from "virtual:pwa-register"
+
 /**
  * Offline storage for one downloaded game instance.
  *
@@ -29,31 +32,22 @@ const DB_NAME = "playloop"
 const DB_VERSION = 1
 const STORE = "instances"
 
-function openDatabase(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION)
-    request.onupgradeneeded = () => {
-      const db = request.result
-      if (!db.objectStoreNames.contains(STORE))
-        db.createObjectStore(STORE, { keyPath: "slug" })
-    }
-    request.onsuccess = () => resolve(request.result)
-    request.onerror = () => reject(request.error)
-  })
+interface OfflineDatabase extends DBSchema {
+  instances: { key: string; value: OfflineInstance }
 }
 
-async function withStore<T>(
-  mode: IDBTransactionMode,
-  run: (store: IDBObjectStore) => IDBRequest<T>
-) {
-  const db = await openDatabase()
-  return new Promise<T>((resolve, reject) => {
-    const transaction = db.transaction(STORE, mode)
-    const request = run(transaction.objectStore(STORE))
-    request.onsuccess = () => resolve(request.result)
-    request.onerror = () => reject(request.error)
-    transaction.oncomplete = () => db.close()
+let database: Promise<IDBPDatabase<OfflineDatabase>> | null = null
+
+/** Opened on demand, so importing this module never touches the browser API. */
+function openDatabase(): Promise<IDBPDatabase<OfflineDatabase>> {
+  database ??= openDB<OfflineDatabase>(DB_NAME, DB_VERSION, {
+    upgrade(instance) {
+      if (!instance.objectStoreNames.contains(STORE)) {
+        instance.createObjectStore(STORE, { keyPath: "slug" })
+      }
+    },
   })
+  return database
 }
 
 export function isOfflineStorageAvailable(): boolean {
@@ -64,10 +58,7 @@ export async function saveOfflineInstance(
   instance: OfflineInstance
 ): Promise<void> {
   if (!isOfflineStorageAvailable()) return
-  await withStore(
-    "readwrite",
-    (store) => store.put(instance) as IDBRequest<IDBValidKey>
-  )
+  await (await openDatabase()).put(STORE, instance)
   await askServiceWorkerToCache(instance.mediaUrls)
 }
 
@@ -75,27 +66,17 @@ export async function loadOfflineInstance(
   slug: string
 ): Promise<OfflineInstance | null> {
   if (!isOfflineStorageAvailable()) return null
-  const found = await withStore<OfflineInstance | undefined>(
-    "readonly",
-    (store) => store.get(slug) as IDBRequest<OfflineInstance | undefined>
-  )
-  return found ?? null
+  return (await (await openDatabase()).get(STORE, slug)) ?? null
 }
 
 export async function removeOfflineInstance(slug: string): Promise<void> {
   if (!isOfflineStorageAvailable()) return
-  await withStore(
-    "readwrite",
-    (store) => store.delete(slug) as IDBRequest<undefined>
-  )
+  await (await openDatabase()).delete(STORE, slug)
 }
 
 export async function listOfflineInstances(): Promise<OfflineInstance[]> {
   if (!isOfflineStorageAvailable()) return []
-  return withStore<OfflineInstance[]>(
-    "readonly",
-    (store) => store.getAll() as IDBRequest<OfflineInstance[]>
-  )
+  return (await openDatabase()).getAll(STORE)
 }
 
 /** Best effort: without a controlling worker the media simply is not precached. */
@@ -105,11 +86,13 @@ async function askServiceWorkerToCache(urls: string[]): Promise<void> {
   registration?.active?.postMessage({ type: "playloop:cache-media", urls })
 }
 
+/**
+ * The worker itself is built by `vite-plugin-pwa`. `autoUpdate` means a new
+ * build takes over on the next visit without asking the player anything.
+ */
 export function registerServiceWorker(): void {
   if (typeof navigator === "undefined" || !("serviceWorker" in navigator))
     return
   if (import.meta.env.DEV) return
-  window.addEventListener("load", () => {
-    void navigator.serviceWorker.register("/service-worker.js")
-  })
+  registerSW({ immediate: true })
 }
