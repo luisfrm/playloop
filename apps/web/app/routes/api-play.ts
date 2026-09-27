@@ -5,6 +5,7 @@ import {
   answerRound,
   expireRound,
   recordScore,
+  serveNextRound,
   startSession,
 } from "@/lib/play-service.server"
 import { getRepository } from "@/lib/repository.server"
@@ -16,7 +17,7 @@ import type { ContentRepository } from "@playloop/db"
 import type { Route } from "./+types/api-play"
 
 type PlayRequest = {
-  action?: "start" | "answer" | "expire"
+  action?: "start" | "answer" | "expire" | "next"
   slug?: string
   sessionId?: string
   answerId?: string
@@ -140,6 +141,16 @@ async function continueGame(intent: PlayIntent) {
     return data({ ok: true, result })
   }
 
+  if (body.action === "next") {
+    const result = await serveNextRound({
+      repository,
+      store,
+      session,
+      random: Math.random,
+    })
+    return data({ ok: true, ...result })
+  }
+
   if (body.action === "answer") {
     if (!body.answerId)
       return data({ error: "Falta la respuesta." }, { status: 400 })
@@ -148,7 +159,6 @@ async function continueGame(intent: PlayIntent) {
       store,
       session,
       answerId: body.answerId,
-      random: Math.random,
     })
     await scoreIfFinished({ repository, store, sessionId: session.id, result })
     return data({ ok: true, result })

@@ -138,7 +138,6 @@ export function submitAnswer(
       streak,
       lives,
       roundsPlayed,
-      roundStartedAt: now,
       lastAnswerAt: now,
       status: lives <= 0 ? "lost" : "running",
     },
@@ -162,11 +161,19 @@ export function expireQuestion(
       lives,
       streak: 0,
       roundsPlayed: state.roundsPlayed + 1,
-      roundStartedAt: now,
       status: lives <= 0 ? "lost" : "running",
     },
     correct: false,
   }
+}
+
+/**
+ * The next round is on screen: the selection clock starts here, never on the
+ * previous answer. Reading the feedback for longer than the limit must not eat
+ * the time the player has to choose in the following round.
+ */
+export function beginRound(state: SessionState, now: number): SessionState {
+  return { ...state, roundStartedAt: now }
 }
 
 /** Ending a session early keeps whatever score was already earned. */

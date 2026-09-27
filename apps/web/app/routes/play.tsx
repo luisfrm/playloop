@@ -188,6 +188,19 @@ export default function Play() {
     setPhase(payload.result.finished ? "finished" : "feedback")
   }, [send, view])
 
+  // The server serves the round, so the selection clock starts when it appears
+  // on screen and not when the previous answer was sent.
+  const continueRound = useCallback(async () => {
+    const payload = await send({ action: "next", sessionId: view?.sessionId })
+    if (!payload.view) {
+      setPhase("finished")
+      return
+    }
+    setView(payload.view)
+    setResult(null)
+    setPhase("playing")
+  }, [send, view?.sessionId])
+
   return (
     <div className="flex min-h-svh flex-col">
       <TopNav />
@@ -207,13 +220,7 @@ export default function Play() {
         onExpire={expire}
         onDownload={downloadForOffline}
         onStartCoop={startCoop}
-        onContinue={() => {
-          if (result?.next) {
-            setView(result.next)
-            setResult(null)
-            setPhase("playing")
-          }
-        }}
+        onContinue={() => void continueRound()}
         onRestart={() => {
           setView(null)
           setResult(null)

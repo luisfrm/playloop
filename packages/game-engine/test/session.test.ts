@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import { baseSettingsSchema } from "../src/settings.js"
 import {
+  beginRound,
   countsForRanking,
   createSession,
   expireQuestion,
@@ -83,10 +84,15 @@ describe("submitAnswer", () => {
     expect(late.state.status).toBe("expired")
   })
 
-  it("moves the round start forward after an answer", () => {
+  it("stamps the answer without touching the round clock", () => {
     const { state } = submitAnswer(fresh(), settings, right, 9_000)
-    expect(state.roundStartedAt).toBe(9_000)
+    expect(state.roundStartedAt).toBe(1_000)
     expect(state.lastAnswerAt).toBe(9_000)
+  })
+
+  it("only restarts the clock when the next round is served", () => {
+    const { state } = submitAnswer(fresh(), settings, right, 9_000)
+    expect(beginRound(state, 20_000).roundStartedAt).toBe(20_000)
   })
 })
 

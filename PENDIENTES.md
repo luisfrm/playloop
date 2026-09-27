@@ -21,6 +21,15 @@ Lista de lo que falta por completar. Revisada el 2026-09-27 con
   del loader en el `ErrorBoundary` y `e2e/coop.spec.ts` comprueba la ronda
   en las dos pantallas.
 
+ 
+- [x] **15. El reloj de selección corría mientras se leía el feedback.** En el
+  flujo solo/online `submitAnswer` sellaba `roundStartedAt` al responder, y la
+  ronda siguiente heredaba ese instante: el tiempo leyendo el feedback se
+  descontaba del presupuesto de selección (15 s por defecto). La práctica ya
+  lo hacía bien (`nextPracticeRound`). Ahora el motor no mueve el reloj al
+  responder (`beginRound` lo hace al servir la ronda), la sesión queda en
+  `awaitingNext` y el cliente pide `action: "next"` al pulsar Continuar.
+ 
 ## Tests
 
 - [x] **2. Unit: `apps/web/test/admin-auth.test.ts`.** El matcher

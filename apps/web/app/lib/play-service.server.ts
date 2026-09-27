@@ -1,6 +1,7 @@
 import type { ContentRepository } from "@playloop/db"
 import {
   baseSettingsSchema,
+  beginRound,
   countsForRanking,
   createSession,
   expireQuestion,
@@ -48,7 +49,14 @@ export type AnswerResponse = {
   correct: boolean
   revealed: { label: string; correctOptionId: string | null }
   stats: PlayStats
-  next: PlayView | null
+  /** The session goes on: the client asks for the next round to be served. */
+  hasNext: boolean
+  finished: boolean
+}
+
+/** What the client gets when it asks for the round after the feedback screen. */
+export type ServeNextResult = {
+  view: PlayView | null
   finished: boolean
 }
 
@@ -234,7 +242,6 @@ export type AnswerInput = {
   session: StoredSession
   /** The chosen option (classic) or dictionary entry (expert). */
   answerId: string
-  random?: () => number
 }
 
 async function loadRoundParts(
@@ -279,7 +286,7 @@ function nextRound(
  * resolution happens here, against the real content.
  */
 export async function answerRound(input: AnswerInput): Promise<AnswerResponse> {
-  const { repository, store, session, answerId, random } = input
+  const { repository, store, session, answerId } = input
   const definition = gameTypes.require(
     (await repository.getInstanceById(session.instanceId))?.gameTypeKey ??
       "true_false"
@@ -315,56 +322,82 @@ export async function answerRound(input: AnswerInput): Promise<AnswerResponse> {
       outcome.state.status === "running"
         ? finishSession(outcome.state)
         : outcome.state
-    const ended = { ...session, state: finished }
-    await store.put(ended)
+    await store.put({ ...session, state: finished, awaitingNext: false })
     return {
       correct: outcome.correct,
       revealed,
       stats: statsOf(finished),
-      next: null,
+      hasNext: false,
       finished: true,
     }
   }
 
-  const pool = (await repository.listContent(
-    session.instanceId
-  )) as ContentItem<Payload>[]
-  const round = nextRound(
-    { ...session, state: outcome.state },
-    definition,
-    pool,
-    random
-  )
-
-  const updated: StoredSession = {
+  // The next round is not built yet: the clock starts when it is served, so the
+  // feedback screen cannot eat the selection time.
+  await store.put({
     ...session,
     state: outcome.state,
     bestStreak: Math.max(session.bestStreak, outcome.state.streak),
+    awaitingNext: true,
     expiresAt: now + SESSION_TTL_MS,
-  }
-
-  if (!round) {
-    const finished = finishSession(outcome.state)
-    await store.put({ ...updated, state: finished })
-    return {
-      correct: outcome.correct,
-      revealed,
-      stats: statsOf(finished),
-      next: null,
-      finished: true,
-    }
-  }
-
-  updated.promptId = round.prompt.id
-  updated.optionIds = round.options.map((option) => option.id)
-  updated.askedIds = [...updated.askedIds, round.prompt.id]
-  await store.put(updated)
+  })
 
   return {
     correct: outcome.correct,
     revealed,
     stats: statsOf(outcome.state),
-    next: viewOf(updated, definition, round.prompt, round.options),
+    hasNext: true,
+    finished: false,
+  }
+}
+
+/**
+ * Serves the round that follows a feedback screen and restarts the selection
+ * clock from *now*. Called when the player is ready, never at answer time.
+ */
+export async function serveNextRound(input: {
+  repository: ContentRepository
+  store: SessionStore
+  session: StoredSession
+  random?: () => number
+}): Promise<ServeNextResult> {
+  const { repository, store, session, random } = input
+  const definition = gameTypes.require(
+    (await repository.getInstanceById(session.instanceId))?.gameTypeKey ??
+      "true_false"
+  ) as AnyDefinition
+
+  // Asking twice (a reload, a double click) just returns the round on screen.
+  if (!session.awaitingNext) {
+    const { prompt, options } = await loadRoundParts(repository, session)
+    return { view: viewOf(session, definition, prompt, options), finished: false }
+  }
+
+  const now = Date.now()
+  const pool = (await repository.listContent(
+    session.instanceId
+  )) as ContentItem<Payload>[]
+  const round = nextRound(session, definition, pool, random)
+
+  if (!round) {
+    const finished = finishSession(session.state)
+    await store.put({ ...session, state: finished, awaitingNext: false })
+    return { view: null, finished: true }
+  }
+
+  const updated: StoredSession = {
+    ...session,
+    state: beginRound(session.state, now),
+    promptId: round.prompt.id,
+    optionIds: round.options.map((option) => option.id),
+    askedIds: [...session.askedIds, round.prompt.id],
+    awaitingNext: false,
+    expiresAt: now + SESSION_TTL_MS,
+  }
+  await store.put(updated)
+
+  return {
+    view: viewOf(updated, definition, round.prompt, round.options),
     finished: false,
   }
 }
@@ -392,52 +425,28 @@ export async function expireRound(input: {
   }
 
   if (outcome.state.status !== "running") {
-    await store.put({ ...session, state: outcome.state })
+    await store.put({ ...session, state: outcome.state, awaitingNext: false })
     return {
       correct: false,
       revealed,
       stats: statsOf(outcome.state),
-      next: null,
+      hasNext: false,
       finished: true,
     }
   }
 
-  const pool = (await repository.listContent(
-    session.instanceId
-  )) as ContentItem<Payload>[]
-  const round = nextRound(
-    { ...session, state: outcome.state },
-    definition,
-    pool,
-    undefined
-  )
-  if (!round) {
-    const finished = finishSession(outcome.state)
-    await store.put({ ...session, state: finished })
-    return {
-      correct: false,
-      revealed,
-      stats: statsOf(finished),
-      next: null,
-      finished: true,
-    }
-  }
-
-  const updated: StoredSession = {
+  await store.put({
     ...session,
     state: outcome.state,
-    promptId: round.prompt.id,
-    optionIds: round.options.map((option) => option.id),
-    askedIds: [...session.askedIds, round.prompt.id],
+    awaitingNext: true,
     expiresAt: now + SESSION_TTL_MS,
-  }
-  await store.put(updated)
+  })
 
   return {
     correct: false,
     revealed,
     stats: statsOf(outcome.state),
-    next: viewOf(updated, definition, round.prompt, round.options),
+    hasNext: true,
     finished: false,
   }
 }

@@ -25,6 +25,12 @@ export type StoredSession = {
   dictionary: DictionaryEntry[]
   expiresAt: number
   /**
+   * True between an answer and the moment the next round is served: the round
+   * parts still point at the answered prompt, so nothing can resolve it twice
+   * and no clock is running for a round the player cannot see yet.
+   */
+  awaitingNext?: boolean
+  /**
    * Set the first time the session's score reaches the ranking. A resent
    * answer on an already-finished session must not write a second score row.
    */

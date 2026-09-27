@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest"
 import {
   answerRound,
   recordScore,
+  serveNextRound,
   startSession,
 } from "@/lib/play-service.server"
 import { MemorySessionStore, type StoredSession } from "@/lib/sessions.server"
@@ -195,17 +196,56 @@ describe("answerRound", () => {
     const fixture = await setup()
     const { session } = await start(fixture)
 
-    const result = await answerRound({
+    const answered = await answerRound({
       repository: fixture.repository,
       store: fixture.store,
       session,
       answerId: session.promptId,
     })
 
-    expect(result.next).not.toBeNull()
-    expect(result.next?.options.map((option) => option.id)).not.toContain(
+    expect(answered.hasNext).toBe(true)
+    expect(answered.finished).toBe(false)
+
+    const stored = await sessionOf(fixture.store, session.id)
+    const served = await serveNextRound({
+      repository: fixture.repository,
+      store: fixture.store,
+      session: stored,
+    })
+
+    expect(served.view).not.toBeNull()
+    expect(served.view?.options.map((option) => option.id)).not.toContain(
       session.promptId
     )
+  })
+
+  it("starts the next clock only when the round is served", async () => {
+    const fixture = await setup()
+    const { session } = await start(fixture)
+
+    await answerRound({
+      repository: fixture.repository,
+      store: fixture.store,
+      session,
+      answerId: session.promptId,
+    })
+
+    const afterAnswer = await sessionOf(fixture.store, session.id)
+    expect(afterAnswer.state.roundStartedAt).toBe(session.state.roundStartedAt)
+    expect(afterAnswer.awaitingNext).toBe(true)
+
+    await new Promise((resolve) => setTimeout(resolve, 5))
+    await serveNextRound({
+      repository: fixture.repository,
+      store: fixture.store,
+      session: afterAnswer,
+    })
+
+    const served = await sessionOf(fixture.store, session.id)
+    expect(served.state.roundStartedAt).toBeGreaterThan(
+      afterAnswer.state.roundStartedAt
+    )
+    expect(served.awaitingNext).toBe(false)
   })
 
   it("ends the session when the last life is lost", async () => {
