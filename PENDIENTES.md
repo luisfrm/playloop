@@ -65,8 +65,10 @@ Lista de lo que falta por completar. Revisada el 2026-09-27 con
 - [ ] **11. Despliegue.** `apps/web/wrangler.jsonc` con placeholders
   `REPLACE_WITH_D1_ID` / `REPLACE_WITH_KV_ID`; faltan los secrets
   (`R2_*`, `ADMIN_*`).
-- [ ] **12. `apps/web/Dockerfile`.** Usa `npm ci` y `npm run start` en un
-  repo pnpm, y el script `start` no existe.
+- [x] **12. `apps/web/Dockerfile`.** Usaba `npm ci` y `npm run start` en un
+  repo pnpm (no hay `package-lock.json` ni script `start`) y su artefacto
+  era un bundle de Workers, que no arranca en Node. Eliminado junto a
+  `.dockerignore`: la spec despliega con `wrangler deploy` (ver 11).
 - [ ] **13. Tests de `packages/ui`.** El paquete no tiene tests ni script
   `test`.
 - [ ] **14. `DESIGN.md` vs `globals.css`.** Divergen en formato de tokens
