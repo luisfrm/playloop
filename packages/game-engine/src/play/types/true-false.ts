@@ -1,11 +1,6 @@
 import { z } from "zod"
 
 import type { ContentItem } from "../../content.js"
-import {
-  entryLookupKeys,
-  normalizeValue,
-  type DictionaryEntry,
-} from "../../dictionary.js"
 import type {
   AnswerResolution,
   BuildRoundInput,
@@ -15,44 +10,32 @@ import type {
 import { label, longText, mediaUrl } from "../../primitives.js"
 import { baseSettingsSchema } from "../../settings.js"
 
-/** One option of a round: the thing the player can pick. */
+/** One board cell: the player marks it when they believe it holds. */
 export const trueFalseContentSchema = z.object({
-  /** Shown to the player as an option and as the prompt caption. */
+  /** Shown on the cell: the statement the player judges. */
   label: label.meta({ title: "Etiqueta" }),
-  /** Media for this option — shown when the item is the prompt. */
+  /** Illustrates the cell. */
   mediaUrl: mediaUrl.meta({ title: "Imagen" }),
   description: longText.optional().meta({ title: "Descripción" }),
-  /** Only items flagged here can become the shown prompt. */
-  isCorrectPool: z
-    .boolean()
-    .default(true)
-    .meta({ title: "Aparece como pregunta" }),
-  /**
-   * Optional explicit key used by expert mode to bind this item to a dictionary
-   * entry. Falls back to `label` when absent.
-   */
-  answerKey: label.optional().meta({ title: "Clave de respuesta" }),
+  /** Cells flagged here are the ones the player must find. */
+  isTrue: z.boolean().default(true).meta({ title: "Es verdadero" }),
 })
 
 export type TrueFalseContent = z.infer<typeof trueFalseContentSchema>
 
-/** Classic = multiple choice. Expert = autocomplete against the dictionary. */
-export const trueFalseSettingsSchema = baseSettingsSchema.extend({
-  answerMode: z
-    .enum(["classic", "expert"])
-    .default("classic")
-    .meta({ title: "Modo de respuesta" }),
-})
+/** The board needs no settings of its own: lives and timers come from base. */
+export const trueFalseSettingsSchema = baseSettingsSchema
 
 export type TrueFalseSettings = z.infer<typeof trueFalseSettingsSchema>
 
-/** Pick a prompt from the pool; falls back to the whole pool when unmarked. */
-function pickPromptPool(pool: readonly ContentItem<TrueFalseContent>[]) {
-  const marked = pool.filter((item) => item.payload.isCorrectPool)
-  return marked.length > 0 ? marked : pool
+/**
+ * Rows written before the flag existed carry no mark: an absent mark counts
+ * as a target, so legacy boards stay completable.
+ */
+function isMarkedTrue(payload: TrueFalseContent): boolean {
+  return (payload as { isTrue?: unknown }).isTrue !== false
 }
 
-/** Deterministic selection so the server can reproduce a round. */
 function pickIndex(length: number, random: () => number): number {
   if (length <= 1) return 0
   return Math.min(length - 1, Math.floor(random() * length))
@@ -72,67 +55,37 @@ function shuffle<T>(items: readonly T[], random: () => number): T[] {
 
 type TrueFalseRoundInput = BuildRoundInput<TrueFalseContent, TrueFalseSettings>
 
-function buildClassicRound(
+function buildBoardRound(
   input: TrueFalseRoundInput
 ): Round<TrueFalseContent> | null {
-  const { pool, settings, random = Math.random } = input
+  const { pool, random = Math.random } = input
   if (pool.length < 2) return null
-
-  const promptPool = pickPromptPool(pool)
-  const prompt = promptPool[pickIndex(promptPool.length, random)]
-  if (!prompt) return null
-
-  const distractorCount = Math.min(settings.optionCount - 1, pool.length - 1)
-  const distractors = shuffle(
-    pool.filter((item) => item.id !== prompt.id),
-    random
-  ).slice(0, distractorCount)
-
-  return { prompt, options: shuffle([prompt, ...distractors], random) }
+  const targets = pool.filter((item) => isMarkedTrue(item.payload))
+  if (targets.length === 0 || targets.length === pool.length) return null
+  return { options: shuffle(pool, random) }
 }
 
-/** The value an item is expected to be answered with. */
-function expectedKey(payload: TrueFalseContent): string {
-  return normalizeValue(payload.answerKey ?? payload.label)
-}
-
-function resolveClassic(
-  prompt: ContentItem<TrueFalseContent>,
-  answer: { kind: "option"; contentItemId: string }
+function resolvePick(
+  options: readonly ContentItem<TrueFalseContent>[],
+  contentItemId: string
 ): AnswerResolution {
-  return {
-    correct: answer.contentItemId === prompt.id,
-    askedContentItemId: prompt.id,
-  }
-}
-
-function resolveExpert(
-  prompt: ContentItem<TrueFalseContent>,
-  dictionary: readonly DictionaryEntry[],
-  answer: { kind: "entry"; dictionaryEntryId: string }
-): AnswerResolution {
-  const entry = dictionary.find(
-    (candidate) => candidate.id === answer.dictionaryEntryId
-  )
-  if (!entry) {
+  const target = options.find((option) => option.id === contentItemId)
+  if (!target) {
     return {
       correct: false,
-      askedContentItemId: prompt.id,
+      askedContentItemId: null,
       reason: "not_found",
     }
   }
   return {
-    correct: entryLookupKeys(entry).includes(expectedKey(prompt.payload)),
-    askedContentItemId: prompt.id,
+    correct: isMarkedTrue(target.payload),
+    askedContentItemId: target.id,
   }
 }
 
 /**
- * `true_false`: one prompt, several options, one of them correct.
- *
- * Expert mode never compares free text — the player selects a dictionary entry
- * and the server compares normalised keys, so a typo can never be the reason a
- * score changed.
+ * `true_false`: a single board with every item on it. The player marks each
+ * cell they believe holds; a miss costs a life and the cell locks either way.
  */
 export const trueFalseGameType: GameTypeDefinition<
   TrueFalseContent,
@@ -141,22 +94,23 @@ export const trueFalseGameType: GameTypeDefinition<
   key: "true_false",
   label: "Verdadero o falso",
   description:
-    "Se muestra un elemento y varias opciones. En modo clásico se elige una; en modo experto se autocompleta contra el diccionario.",
+    "Un tablero con todos los elementos: marca los verdaderos. Cada falso cuesta una vida.",
   contentSchema: trueFalseContentSchema,
   settingsSchema: trueFalseSettingsSchema,
-  requiresDictionary: true,
+  requiresDictionary: false,
+  timeoutPolicy: "lose-match",
+  completionBonus: 2,
   presentation: {
-    promptMediaField: "mediaUrl",
     optionLabelField: "label",
-    promptCaptionField: "description",
+    optionMediaField: "mediaUrl",
+    optionCaptionField: "description",
   },
 
   buildRound(input) {
-    return buildClassicRound(input)
+    return buildBoardRound(input)
   },
 
-  resolveAnswer({ prompt, dictionary, answer }) {
-    if (answer.kind === "option") return resolveClassic(prompt, answer)
-    return resolveExpert(prompt, dictionary, answer)
+  resolveAnswer({ options, answer }) {
+    return resolvePick(options, answer.contentItemId)
   },
 }

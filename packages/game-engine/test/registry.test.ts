@@ -36,7 +36,7 @@ describe("GameTypeRegistry", () => {
       key: "true_false",
       label: "Verdadero o falso",
       description: expect.any(String),
-      requiresDictionary: true,
+      requiresDictionary: false,
     })
   })
 })

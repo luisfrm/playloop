@@ -1,6 +1,7 @@
 import type { RoomPublicState } from "@playloop/game-engine"
 import { Badge } from "@playloop/ui/components/badge"
 import { Button } from "@playloop/ui/components/button"
+import { Check, X } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link, useParams } from "react-router"
 
@@ -13,13 +14,15 @@ import {
   connectRoom,
   joinRoom,
   leaveRoom,
+  restartRoom,
   roomFailure,
   startRoom,
   type RoomResponse,
 } from "@/lib/coop"
 import { hydratePlayer, usePlayer } from "@/lib/player"
 
-type Question = NonNullable<RoomPublicState["question"]>
+type Board = RoomPublicState["board"]
+type Turn = NonNullable<RoomPublicState["turn"]>
 
 const PHASE_LABELS: Record<RoomPublicState["phase"], string> = {
   lobby: "Esperando jugadores",
@@ -101,10 +104,7 @@ export default function Sala() {
     }
   }, [])
 
-  const remaining = useCountdown(
-    room?.question?.expiresAt ?? null,
-    () => undefined
-  )
+  const remaining = useCountdown(room?.turn?.expiresAt ?? null, () => undefined)
   const standings = useMemo(
     () => (room ? [...room.members].sort((a, b) => b.score - a.score) : []),
     [room]
@@ -124,8 +124,9 @@ export default function Sala() {
             ) : null}
           </div>
           <p className="max-w-[60ch] text-sm text-muted-foreground">
-            Todos responden la misma pregunta a la vez y cada acierto suma un
-            punto para quien lo acierta. Hasta 8 jugadores por sala.
+            Un tablero compartido por turnos estrictos: cada ronda elige cada
+            jugador una casilla. Cada falso cuesta una vida; completar el
+            tablero o quedar en pie gana la partida. Hasta 8 jugadores por sala.
           </p>
         </header>
 
@@ -158,11 +159,38 @@ function Standings({ members }: { members: RoomPublicState["members"] }) {
         >
           <span className="min-w-0 truncate">
             {index + 1}. {member.name}
-            {!member.connected ? (
+            {member.lives <= 0 ? (
+              <span className="text-muted-foreground"> · eliminado</span>
+            ) : !member.connected ? (
               <span className="text-muted-foreground"> · desconectado</span>
             ) : null}
           </span>
-          <span className="font-heading font-bold">{member.score}</span>
+          <span className="flex items-center gap-3">
+            <span className="text-xs text-muted-foreground">
+              {member.lives} {member.lives === 1 ? "vida" : "vidas"}
+            </span>
+            <span className="font-heading font-bold">{member.score}</span>
+          </span>
+        </li>
+      ))}
+    </ol>
+  )
+}
+
+function GlobalStandings({ members }: { members: RoomPublicState["members"] }) {
+  const sorted = [...members].sort((a, b) => b.totalScore - a.totalScore)
+
+  return (
+    <ol className="flex flex-col gap-2">
+      {sorted.map((member, index) => (
+        <li
+          key={member.playerId}
+          className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border px-3 py-2 text-sm"
+        >
+          <span className="min-w-0 truncate">
+            {index + 1}. {member.name}
+          </span>
+          <span className="font-heading font-bold">{member.totalScore}</span>
         </li>
       ))}
     </ol>
@@ -214,23 +242,31 @@ function Lobby(props: {
   )
 }
 
-function QuestionPanel(props: {
+function BoardPanel(props: {
   room: RoomPublicState
-  question: Question
+  board: Board
+  turn: Turn
   remaining: number | null
   playerId: string
   pending: boolean
   onAnswer: (optionId: string) => void
 }) {
-  const { question } = props
-  const answered = question.answeredBy.includes(props.playerId)
+  const { board, turn } = props
+  const holder = props.room.members.find(
+    (member) => member.playerId === turn.turnMemberId
+  )
+  const mine = turn.turnMemberId === props.playerId
+  const me = props.room.members.find(
+    (member) => member.playerId === props.playerId
+  )
+  const eliminated = (me?.lives ?? 1) <= 0
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <dl className="flex flex-wrap gap-5 font-label text-[11px] tracking-[0.08em] uppercase">
-          <Stat label="Pregunta" value={props.room.questionCount} />
-          <Stat label="Han respondido" value={question.answeredBy.length} />
+          <Stat label="Ronda" value={props.room.roundNumber} />
+          <Stat label="Encontrados" value={board.found} />
         </dl>
         {props.remaining !== null ? (
           <Badge accent={props.remaining < 5000 ? "coral" : "neutral"}>
@@ -239,48 +275,60 @@ function QuestionPanel(props: {
         ) : null}
       </div>
 
-      <img
-        src={question.prompt.mediaUrl}
-        alt=""
-        width={800}
-        height={500}
-        className="aspect-[8/5] w-full rounded-[var(--radius-lg)] border object-cover"
-      />
-      {question.prompt.caption ? (
-        <p className="text-sm text-muted-foreground">
-          {question.prompt.caption}
-        </p>
-      ) : null}
+      <p
+        role="status"
+        aria-live="polite"
+        className="text-sm text-muted-foreground"
+      >
+        {eliminated
+          ? "Estás eliminado. Mira cómo termina la partida."
+          : mine
+            ? "Es tu turno: elige una casilla."
+            : `Turno de ${holder?.name ?? "otro jugador"}.`}
+      </p>
 
       <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {question.options.map((option) => (
+        {board.options.map((option) => (
           <li key={option.id}>
             <Button
               type="button"
               variant="outline"
               size="lg"
-              className="w-full justify-start whitespace-normal"
-              disabled={props.pending || answered}
+              className={
+                option.resolved === "true"
+                  ? "w-full justify-start border-success bg-success/10 whitespace-normal"
+                  : option.resolved === "false"
+                    ? "w-full justify-start border-destructive bg-destructive/10 whitespace-normal"
+                    : "w-full justify-start whitespace-normal"
+              }
+              disabled={props.pending || !mine || option.resolved !== null}
               onClick={() => props.onAnswer(option.id)}
             >
-              {option.label}
+              {option.resolved === "true" ? (
+                <Check aria-hidden="true" className="size-4 shrink-0" />
+              ) : option.resolved === "false" ? (
+                <X aria-hidden="true" className="size-4 shrink-0" />
+              ) : null}
+              {option.mediaUrl ? (
+                <img
+                  src={option.mediaUrl}
+                  alt=""
+                  width={80}
+                  height={80}
+                  loading="lazy"
+                  className="size-10 shrink-0 rounded-[var(--radius-md)] border object-cover"
+                />
+              ) : null}
+              <span className="[overflow-wrap:anywhere]">{option.label}</span>
             </Button>
           </li>
         ))}
       </ul>
 
-      <p
-        role="status"
-        aria-live="polite"
-        className="text-xs text-muted-foreground"
-      >
-        {answered
-          ? "Respuesta enviada. Espera a los demás o al final del tiempo."
-          : "Elige una opción. Cuando acabe el tiempo la sala pasa sola."}
-      </p>
-
       <div className="border-t pt-4">
-        <h2 className="mb-3 font-heading text-lg font-bold">Marcador</h2>
+        <h2 className="mb-3 font-heading text-lg font-bold">
+          Marcador de la partida
+        </h2>
         <Standings members={props.room.members} />
       </div>
     </div>
@@ -288,12 +336,16 @@ function QuestionPanel(props: {
 }
 
 function Results(props: {
+  room: RoomPublicState
   standings: RoomPublicState["members"]
   gameSlug: string
+  playerId: string
   pending: boolean
+  act: (run: () => Promise<RoomResponse>) => Promise<void>
   onLeave: () => void
 }) {
   const winner = props.standings[0]
+  const isHost = props.room.hostId === props.playerId
 
   return (
     <div className="flex flex-col gap-5 rounded-[var(--radius-lg)] border bg-card p-6">
@@ -301,9 +353,33 @@ function Results(props: {
         {winner ? `Gana ${winner.name}` : "Partida terminada"}
       </h2>
 
-      <Standings members={props.standings} />
+      <div className="flex flex-col gap-2">
+        <h3 className="font-label text-[11px] tracking-[0.1em] text-muted-foreground uppercase">
+          Partida {props.room.matchNumber}
+        </h3>
+        <Standings members={props.standings} />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <h3 className="font-label text-[11px] tracking-[0.1em] text-muted-foreground uppercase">
+          Acumulado de la sala
+        </h3>
+        <GlobalStandings members={props.room.members} />
+      </div>
 
       <div className="flex flex-wrap gap-2 border-t pt-4">
+        {isHost ? (
+          <Button
+            type="button"
+            size="lg"
+            disabled={props.pending}
+            onClick={() =>
+              void props.act(() => restartRoom(props.room.code, props.playerId))
+            }
+          >
+            {props.pending ? "Preparando…" : "Jugar otra"}
+          </Button>
+        ) : null}
         <Button size="lg" render={<Link to={`/game/${props.gameSlug}`} />}>
           Jugar este juego
         </Button>
@@ -356,7 +432,7 @@ function RoomNotice(props: {
   )
 }
 
-/** The lobby, question and results views, picked from the authoritative phase. */
+/** The lobby, board and results views, picked from the authoritative phase. */
 function RoomSection(props: {
   room: RoomPublicState | null
   joined: boolean
@@ -383,11 +459,12 @@ function RoomSection(props: {
     )
   }
 
-  if (room.phase === "playing" && room.question) {
+  if (room.phase === "playing" && room.turn) {
     return (
-      <QuestionPanel
+      <BoardPanel
         room={room}
-        question={room.question}
+        board={room.board}
+        turn={room.turn}
         remaining={props.remaining}
         playerId={props.playerId}
         pending={props.pending}
@@ -401,9 +478,12 @@ function RoomSection(props: {
   if (room.phase === "finished") {
     return (
       <Results
+        room={room}
         standings={props.standings}
         gameSlug={room.gameSlug}
+        playerId={props.playerId}
         pending={props.pending}
+        act={props.act}
         onLeave={() =>
           void props.act(() => leaveRoom(props.code, props.playerId))
         }

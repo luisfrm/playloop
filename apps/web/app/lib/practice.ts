@@ -1,13 +1,14 @@
 import {
   baseSettingsSchema,
+  completeSession,
   createSession,
   expireQuestion,
   finishSession,
   gameTypes,
   hasTimedOut,
+  questionDeadline,
   selectionDeadline,
   submitAnswer,
-  type AnswerResolution,
   type BaseSettings,
   type ContentItem,
   type GameTypeDefinition,
@@ -17,7 +18,7 @@ import {
 import type { OfflineInstance } from "./offline"
 
 /**
- * Practice mode: the whole round loop runs in the browser against a downloaded
+ * Practice mode: the whole board loop runs in the browser against a downloaded
  * instance, so a game works with no network at all.
  *
  * Two consequences are deliberate and permanent:
@@ -40,43 +41,46 @@ export type PracticeStats = {
   status: SessionState["status"]
 }
 
+export type PracticeChip = {
+  id: string
+  label: string
+  mediaUrl: string
+  caption?: string
+  resolved: "true" | "false" | null
+}
+
 export type PracticeView = {
-  answerMode: "classic" | "expert"
-  prompt: { mediaUrl: string; caption?: string }
-  options: { id: string; label: string }[]
-  dictionary: { id: string; value: string }[]
+  board: PracticeChip[]
+  found: number
+  total: number
   stats: PracticeStats
+  questionDeadlineMs: number | null
   selectionDeadlineMs: number | null
 }
 
 export type PracticeState = {
   instance: OfflineInstance
-  answerMode: "classic" | "expert"
   settings: BaseSettings
   session: SessionState
-  promptId: string
-  optionIds: string[]
-  /** Only ever populated in expert mode. */
-  dictionary: OfflineInstance["dictionary"]
-  /** Every prompt already served, so a round is not repeated while it can be. */
-  askedIds: string[]
+  /** Board order, frozen at start. */
+  orderedIds: string[]
+  /** The ids the player must find, frozen at start. */
+  trueIds: string[]
+  /** Ids already picked, true or false: locked cells. */
+  resolvedIds: string[]
   finished: boolean
 }
 
 export type PracticeAnswer = {
   state: PracticeState
   correct: boolean
-  revealedLabel: string
+  /** The cell was already locked: nothing changed. */
+  alreadyResolved: boolean
 }
 
 type Payload = Record<string, unknown>
 
-type AnyDefinition = GameTypeDefinition<
-  Payload,
-  BaseSettings & { answerMode?: "classic" | "expert" }
->
-
-const OFFLINE_PLAYER_ID = "offline"
+type AnyDefinition = GameTypeDefinition<Payload, BaseSettings>
 
 function definitionOf(instance: OfflineInstance): AnyDefinition {
   return gameTypes.require(instance.gameTypeKey) as AnyDefinition
@@ -112,24 +116,12 @@ function textOf(payload: Payload, field: string | undefined): string {
   return typeof value === "string" ? value : ""
 }
 
-function answerModeFor(
-  instance: OfflineInstance,
-  requested: "classic" | "expert"
-): "classic" | "expert" {
-  if (requested !== "expert") return "classic"
-  return instance.dictionary.length > 0 ? "expert" : "classic"
-}
-
-function buildRound(
-  definition: AnyDefinition,
-  pool: ContentItem<Payload>[],
-  settings: BaseSettings,
-  askedIds: string[],
-  random: () => number
-) {
-  const fresh = pool.filter((item) => !askedIds.includes(item.id))
-  const usable = fresh.length >= 2 ? fresh : pool
-  return definition.buildRound({ pool: usable, settings, random })
+function resolvedOf(
+  state: PracticeState,
+  id: string
+): PracticeChip["resolved"] {
+  if (!state.resolvedIds.includes(id)) return null
+  return state.trueIds.includes(id) ? "true" : "false"
 }
 
 function statsOf(session: SessionState): PracticeStats {
@@ -142,144 +134,88 @@ function statsOf(session: SessionState): PracticeStats {
   }
 }
 
-function roundOf(
-  state: PracticeState
-): { prompt: ContentItem<Payload>; options: ContentItem<Payload>[] } | null {
+function boardOf(state: PracticeState): ContentItem<Payload>[] {
   const byId = new Map(poolOf(state.instance).map((item) => [item.id, item]))
-  const prompt = byId.get(state.promptId)
-  if (!prompt) return null
+  return state.orderedIds
+    .map((id) => byId.get(id))
+    .filter((item): item is ContentItem<Payload> => item !== undefined)
+}
 
-  return {
-    prompt,
-    options: state.optionIds
-      .map((id) => byId.get(id))
-      .filter((item): item is ContentItem<Payload> => item !== undefined),
-  }
+function targetIdsOf(
+  definition: AnyDefinition,
+  options: ContentItem<Payload>[],
+  settings: BaseSettings
+): string[] {
+  return options
+    .filter(
+      (option) =>
+        definition.resolveAnswer({
+          options,
+          settings,
+          dictionary: [],
+          answer: { kind: "option", contentItemId: option.id },
+        }).correct
+    )
+    .map((option) => option.id)
 }
 
 export function startPractice(
   instance: OfflineInstance,
-  requestedMode: "classic" | "expert" = "classic",
   random: () => number = Math.random,
   now: number = Date.now()
 ): PracticeState | null {
   const settings = settingsOf(instance)
   const pool = poolOf(instance)
-  if (pool.length < 2) return null
 
-  const round = buildRound(definitionOf(instance), pool, settings, [], random)
+  const round = definitionOf(instance).buildRound({ pool, settings, random })
   if (!round) return null
-
-  const answerMode = answerModeFor(instance, requestedMode)
 
   return {
     instance,
-    answerMode,
     settings,
     session: createSession({
       sessionId: `practice:${instance.slug}`,
       gameInstanceId: instance.instanceId,
-      playerId: OFFLINE_PLAYER_ID,
+      playerId: "offline",
       settings,
       now,
     }),
-    promptId: round.prompt.id,
-    optionIds: round.options.map((option) => option.id),
-    dictionary: answerMode === "expert" ? instance.dictionary : [],
-    askedIds: [round.prompt.id],
+    orderedIds: round.options.map((option) => option.id),
+    trueIds: targetIdsOf(definitionOf(instance), round.options, settings),
+    resolvedIds: [],
     finished: false,
   }
 }
 
-/**
- * Serves the next round and restarts the selection clock from *now*.
- *
- * Kept separate from `answerPractice` on purpose: the clock must start when the
- * round is on screen, not when the previous answer was submitted — otherwise
- * reading the feedback for longer than the limit would expire the next round
- * before the player could see it.
- */
-export function nextPracticeRound(
-  state: PracticeState,
-  random: () => number = Math.random,
-  now: number = Date.now()
-): PracticeState | null {
-  if (state.finished) return null
-
-  const round = buildRound(
-    definitionOf(state.instance),
-    poolOf(state.instance),
-    state.settings,
-    state.askedIds,
-    random
-  )
-  if (!round) return null
-
-  return {
-    ...state,
-    session: { ...state.session, roundStartedAt: now },
-    promptId: round.prompt.id,
-    optionIds: round.options.map((option) => option.id),
-    askedIds: [...state.askedIds, round.prompt.id],
-  }
-}
-
 export function practiceView(state: PracticeState): PracticeView | null {
-  const round = roundOf(state)
-  if (!round) return null
+  const options = boardOf(state)
+  if (options.length === 0) return null
 
   const presentation = definitionOf(state.instance).presentation
+  const byId = new Map(options.map((option) => [option.id, option]))
+
+  const board: PracticeChip[] = state.orderedIds.flatMap((id) => {
+    const item = byId.get(id)
+    if (!item) return []
+    return [
+      {
+        id,
+        label: textOf(item.payload, presentation.optionLabelField),
+        mediaUrl: textOf(item.payload, presentation.optionMediaField),
+        caption:
+          textOf(item.payload, presentation.optionCaptionField) || undefined,
+        resolved: resolvedOf(state, id),
+      },
+    ]
+  })
 
   return {
-    answerMode: state.answerMode,
-    prompt: {
-      mediaUrl: textOf(round.prompt.payload, presentation.promptMediaField),
-      caption:
-        textOf(round.prompt.payload, presentation.promptCaptionField) ||
-        undefined,
-    },
-    options: round.options.map((option) => ({
-      id: option.id,
-      label: textOf(option.payload, presentation.optionLabelField),
-    })),
-    dictionary: state.dictionary.map((entry) => ({
-      id: entry.id,
-      value: entry.value,
-    })),
+    board,
+    found: state.trueIds.filter((id) => state.resolvedIds.includes(id)).length,
+    total: state.trueIds.length,
     stats: statsOf(state.session),
+    questionDeadlineMs: questionDeadline(state.session, state.settings),
     selectionDeadlineMs: selectionDeadline(state.session, state.settings),
-  }
-}
-
-function resolve(
-  state: PracticeState,
-  answerId: string
-): { resolution: AnswerResolution; revealedLabel: string } {
-  const definition = definitionOf(state.instance)
-  const round = roundOf(state)
-  const revealedLabel = round
-    ? textOf(round.prompt.payload, definition.presentation.optionLabelField)
-    : ""
-
-  if (!round) {
-    return {
-      resolution: { correct: false, askedContentItemId: state.promptId },
-      revealedLabel,
-    }
-  }
-
-  return {
-    resolution: definition.resolveAnswer({
-      prompt: round.prompt,
-      options: round.options,
-      settings: state.settings,
-      dictionary: state.dictionary,
-      answer:
-        state.answerMode === "expert"
-          ? { kind: "entry", dictionaryEntryId: answerId }
-          : { kind: "option", contentItemId: answerId },
-    }),
-    revealedLabel,
   }
 }
 
@@ -288,7 +224,7 @@ function settle(
   state: PracticeState,
   session: SessionState,
   correct: boolean,
-  revealedLabel: string,
+  alreadyResolved: boolean,
   now: number
 ): PracticeAnswer {
   const over =
@@ -301,7 +237,7 @@ function settle(
       finished: over,
     },
     correct,
-    revealedLabel,
+    alreadyResolved,
   }
 }
 
@@ -310,17 +246,70 @@ export function answerPractice(
   answerId: string,
   now: number = Date.now()
 ): PracticeAnswer {
-  const { resolution, revealedLabel } = resolve(state, answerId)
+  if (
+    state.finished ||
+    state.session.status !== "running" ||
+    hasTimedOut(state.session, state.settings, now)
+  ) {
+    return settle(
+      state,
+      finishSession(state.session, "expired"),
+      false,
+      false,
+      now
+    )
+  }
+
+  if (
+    !state.orderedIds.includes(answerId) ||
+    state.resolvedIds.includes(answerId)
+  ) {
+    return { state, correct: false, alreadyResolved: true }
+  }
+
+  const definition = definitionOf(state.instance)
+  const options = boardOf(state)
+  const resolution = definition.resolveAnswer({
+    options,
+    settings: state.settings,
+    dictionary: [],
+    answer: { kind: "option", contentItemId: answerId },
+  })
   const outcome = submitAnswer(state.session, state.settings, resolution, now)
-  return settle(state, outcome.state, outcome.correct, revealedLabel, now)
+  const resolvedIds = [...state.resolvedIds, answerId]
+  const openTargets = state.trueIds.filter((id) =>
+    options.some((option) => option.id === id)
+  )
+
+  let session = outcome.state
+  if (
+    session.status === "running" &&
+    resolution.correct &&
+    openTargets.every((id) => resolvedIds.includes(id))
+  ) {
+    session = completeSession(session, definition.completionBonus)
+  }
+
+  return settle({ ...state, resolvedIds }, session, outcome.correct, false, now)
 }
 
-/** The local selection timer fired: the round is lost without an answer. */
+/** The local selection timer fired: the board's policy decides the cost. */
 export function expirePractice(
   state: PracticeState,
   now: number = Date.now()
 ): PracticeAnswer {
-  const { revealedLabel } = resolve(state, state.promptId)
-  const outcome = expireQuestion(state.session, state.settings, now)
-  return settle(state, outcome.state, false, revealedLabel, now)
+  if (state.finished || state.session.status !== "running") {
+    return { state, correct: false, alreadyResolved: false }
+  }
+
+  const definition = definitionOf(state.instance)
+  const session =
+    definition.timeoutPolicy === "lose-match"
+      ? finishSession(
+          state.session,
+          hasTimedOut(state.session, state.settings, now) ? "expired" : "lost"
+        )
+      : expireQuestion(state.session, state.settings, now).state
+
+  return settle(state, session, false, false, now)
 }

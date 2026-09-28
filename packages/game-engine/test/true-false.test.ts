@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import type { DictionaryEntry } from "../src/dictionary.js"
+import type { TrueFalseContent } from "../src/play/types/true-false.js"
 import {
   trueFalseGameType,
   trueFalseSettingsSchema,
@@ -9,215 +9,140 @@ import { item, seededRandom } from "./helpers.js"
 
 const pool = [
   item("1", { label: "Elemento Alfa" }),
-  item("2", { label: "Elemento Beta" }),
+  item("2", { label: "Elemento Beta", isTrue: false }),
   item("3", { label: "Elemento Gamma" }),
-  item("4", { label: "Elemento Delta" }),
+  item("4", { label: "Elemento Delta", isTrue: false }),
 ]
 
-const settings = trueFalseSettingsSchema.parse({ optionCount: 4, lives: 3 })
+const settings = trueFalseSettingsSchema.parse({ lives: 3 })
 
 describe("true_false · buildRound", () => {
-  it("always includes the prompt among the options", () => {
-    for (let seed = 1; seed <= 40; seed++) {
-      const round = trueFalseGameType.buildRound({
-        pool,
-        settings,
-        random: seededRandom(seed),
-      })
-
-      expect(round).not.toBeNull()
-      const optionIds = round!.options.map((option) => option.id)
-      expect(optionIds).toContain(round!.prompt.id)
-    }
-  })
-
-  it("never repeats an option", () => {
+  it("serves the whole pool as a single board", () => {
     const round = trueFalseGameType.buildRound({
       pool,
       settings,
       random: seededRandom(7),
+    })
+
+    expect(round).not.toBeNull()
+    expect(round!.options.map((option) => option.id).sort()).toEqual([
+      "1",
+      "2",
+      "3",
+      "4",
+    ])
+  })
+
+  it("shuffles deterministically with the same seed", () => {
+    const first = trueFalseGameType.buildRound({
+      pool,
+      settings,
+      random: seededRandom(7),
     })!
-    expect(new Set(round.options.map((option) => option.id)).size).toBe(
-      round.options.length
+    const second = trueFalseGameType.buildRound({
+      pool,
+      settings,
+      random: seededRandom(7),
+    })!
+
+    expect(second.options.map((option) => option.id)).toEqual(
+      first.options.map((option) => option.id)
     )
   })
 
-  it("honours optionCount", () => {
-    const round = trueFalseGameType.buildRound({
-      pool,
-      settings: trueFalseSettingsSchema.parse({ optionCount: 2 }),
-      random: seededRandom(3),
-    })!
-    expect(round.options).toHaveLength(2)
-  })
-
-  it("only asks items flagged for the prompt pool", () => {
-    const marked = [
-      item("1", { isCorrectPool: false }),
-      item("2", { isCorrectPool: true }),
-      item("3", { isCorrectPool: true }),
-    ]
-    const round = trueFalseGameType.buildRound({
-      pool: marked,
-      settings,
-      random: seededRandom(11),
-    })!
-    expect(round.prompt.payload.isCorrectPool).toBe(true)
-  })
-
-  it("falls back to the whole pool when nothing is flagged", () => {
-    const unmarked = [
-      item("1", { isCorrectPool: false }),
-      item("2", { isCorrectPool: false }),
-    ]
-    const round = trueFalseGameType.buildRound({
-      pool: unmarked,
-      settings,
-      random: seededRandom(5),
-    })
-    expect(round).not.toBeNull()
-  })
-
-  it("returns null when there is nothing to ask", () => {
+  it("returns null when there is nothing to play with", () => {
     expect(
       trueFalseGameType.buildRound({ pool: [item("1")], settings })
     ).toBeNull()
   })
+
+  it("returns null when nothing is marked true", () => {
+    const allFalse = [
+      item("1", { isTrue: false }),
+      item("2", { isTrue: false }),
+    ]
+    expect(
+      trueFalseGameType.buildRound({ pool: allFalse, settings })
+    ).toBeNull()
+  })
+
+  it("returns null when everything is marked true", () => {
+    const allTrue = [item("1"), item("2")]
+    expect(trueFalseGameType.buildRound({ pool: allTrue, settings })).toBeNull()
+  })
+
+  it("counts legacy rows without the flag as targets", () => {
+    const legacy = {
+      ...item("9"),
+      payload: {
+        label: "Elemento 9",
+        mediaUrl: "https://example.invalid/9.png",
+      } as unknown as TrueFalseContent,
+    }
+    const round = trueFalseGameType.buildRound({
+      pool: [legacy, item("2", { isTrue: false })],
+      settings,
+      random: seededRandom(3),
+    })
+    expect(round).not.toBeNull()
+  })
 })
 
-describe("true_false · classic resolution", () => {
+describe("true_false · resolution", () => {
   const round = trueFalseGameType.buildRound({
     pool,
     settings,
     random: seededRandom(9),
   })!
 
-  it("accepts the prompt itself as the correct option", () => {
-    const resolution = trueFalseGameType.resolveAnswer({
-      prompt: round.prompt,
-      options: round.options,
-      settings,
-      dictionary: [],
-      answer: { kind: "option", contentItemId: round.prompt.id },
-    })
-
-    expect(resolution).toEqual({
-      correct: true,
-      askedContentItemId: round.prompt.id,
-    })
-  })
-
-  it("rejects any other option", () => {
-    const wrong = round.options.find((option) => option.id !== round.prompt.id)!
-    const resolution = trueFalseGameType.resolveAnswer({
-      prompt: round.prompt,
-      options: round.options,
-      settings,
-      dictionary: [],
-      answer: { kind: "option", contentItemId: wrong.id },
-    })
-
-    expect(resolution.correct).toBe(false)
-  })
-})
-
-describe("true_false · expert resolution", () => {
-  const prompt = item("1", { label: "Elemento Alfa" })
-  const dictionary: DictionaryEntry[] = [
-    {
-      id: "d1",
-      gameInstanceId: "inst",
-      value: "Elemento Alfa",
-      aliases: ["Alfa"],
-    },
-    { id: "d2", gameInstanceId: "inst", value: "Elemento Beta", aliases: [] },
-  ]
-
-  const resolve = (dictionaryEntryId: string) =>
+  const resolve = (contentItemId: string) =>
     trueFalseGameType.resolveAnswer({
-      prompt,
-      options: [prompt],
+      options: round.options,
       settings,
-      dictionary,
-      answer: { kind: "entry", dictionaryEntryId },
+      dictionary: [],
+      answer: { kind: "option", contentItemId },
     })
 
-  it("accepts a dictionary entry whose value matches the prompt", () => {
-    expect(resolve("d1").correct).toBe(true)
+  it("accepts a marked cell as correct", () => {
+    const resolution = resolve("1")
+    expect(resolution).toEqual({ correct: true, askedContentItemId: "1" })
   })
 
-  it("accepts an alias of the right entry", () => {
-    expect(resolve("d1").correct).toBe(true)
+  it("rejects an unmarked cell", () => {
+    const resolution = resolve("2")
+    expect(resolution.correct).toBe(false)
+    expect(resolution.askedContentItemId).toBe("2")
   })
 
-  it("rejects the wrong entry", () => {
-    expect(resolve("d2").correct).toBe(false)
-  })
-
-  it("reports an unknown entry instead of guessing", () => {
+  it("reports an id outside the board instead of guessing", () => {
     const resolution = resolve("nope")
     expect(resolution.correct).toBe(false)
+    expect(resolution.askedContentItemId).toBeNull()
     expect(resolution.reason).toBe("not_found")
-  })
-
-  it("matches through an explicit answerKey", () => {
-    const keyed = item("9", {
-      label: "Etiqueta visible",
-      answerKey: "Clave Interna",
-    })
-    const resolution = trueFalseGameType.resolveAnswer({
-      prompt: keyed,
-      options: [keyed],
-      settings,
-      dictionary: [
-        {
-          id: "d9",
-          gameInstanceId: "inst",
-          value: "clave interna",
-          aliases: [],
-        },
-      ],
-      answer: { kind: "entry", dictionaryEntryId: "d9" },
-    })
-
-    expect(resolution.correct).toBe(true)
-  })
-
-  it("ignores accents and case when matching", () => {
-    const accented = item("10", { label: "Elementó Alfa" })
-    const resolution = trueFalseGameType.resolveAnswer({
-      prompt: accented,
-      options: [accented],
-      settings,
-      dictionary: [
-        {
-          id: "d10",
-          gameInstanceId: "inst",
-          value: "elemento alfa",
-          aliases: [],
-        },
-      ],
-      answer: { kind: "entry", dictionaryEntryId: "d10" },
-    })
-
-    expect(resolution.correct).toBe(true)
   })
 })
 
 describe("true_false · contract", () => {
-  it("declares that it needs a dictionary for expert mode", () => {
-    expect(trueFalseGameType.requiresDictionary).toBe(true)
+  it("needs no dictionary", () => {
+    expect(trueFalseGameType.requiresDictionary).toBe(false)
   })
 
-  it("validates its settings through its own schema", () => {
+  it("loses the match on timeout and pays a completion bonus", () => {
+    expect(trueFalseGameType.timeoutPolicy).toBe("lose-match")
+    expect(trueFalseGameType.completionBonus).toBe(2)
+  })
+
+  it("validates its settings through the base schema", () => {
     const parsed = trueFalseSettingsSchema.parse({})
-    expect(parsed.answerMode).toBe("classic")
     expect(parsed.lives).toBe(3)
+    expect("answerMode" in parsed).toBe(false)
   })
 
-  it("rejects an invalid option count", () => {
-    expect(trueFalseSettingsSchema.safeParse({ optionCount: 99 }).success).toBe(
-      false
-    )
+  it("flags cells through isTrue", () => {
+    const parsed = trueFalseGameType.contentSchema.parse({
+      label: "Elemento 1",
+      mediaUrl: "https://example.invalid/1.png",
+    })
+    expect(parsed.isTrue).toBe(true)
   })
 })

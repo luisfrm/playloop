@@ -5,7 +5,6 @@ import {
   answerRound,
   expireRound,
   recordScore,
-  serveNextRound,
   startSession,
 } from "@/lib/play-service.server"
 import { getRepository } from "@/lib/repository.server"
@@ -17,13 +16,12 @@ import type { ContentRepository } from "@playloop/db"
 import type { Route } from "./+types/api-play"
 
 type PlayRequest = {
-  action?: "start" | "answer" | "expire" | "next"
+  action?: "start" | "answer" | "expire"
   slug?: string
   sessionId?: string
   answerId?: string
   playerId?: string
   playerName?: string
-  mode?: "classic" | "expert"
 }
 
 /** Everything a single intent needs, already resolved from the request. */
@@ -111,7 +109,6 @@ async function startGame(intent: PlayIntent) {
       store,
       instance,
       playerId,
-      requestedMode: body.mode === "expert" ? "expert" : "classic",
       random: Math.random,
     })
     return data({ ok: true, view })
@@ -139,16 +136,6 @@ async function continueGame(intent: PlayIntent) {
     const result = await expireRound({ repository, store, session })
     await scoreIfFinished({ repository, store, sessionId: session.id, result })
     return data({ ok: true, result })
-  }
-
-  if (body.action === "next") {
-    const result = await serveNextRound({
-      repository,
-      store,
-      session,
-      random: Math.random,
-    })
-    return data({ ok: true, ...result })
   }
 
   if (body.action === "answer") {

@@ -4,26 +4,23 @@ import type { ContentItem } from "./content.js"
 import type { DictionaryEntry } from "./dictionary.js"
 import type { BaseSettings } from "./settings.js"
 
-/** The player's submission. Both variants resolve server-side to a real entity. */
-export type Answer =
-  | { kind: "option"; contentItemId: string }
-  | { kind: "entry"; dictionaryEntryId: string }
+/** The player's submission: the id of the board item they picked. */
+export type Answer = { kind: "option"; contentItemId: string }
 
 export type AnswerResolution = {
   correct: boolean
-  /** The content item the round was actually asking about, if any. */
+  /** The board item the submission resolved against, if any. */
   askedContentItemId: string | null
   /** Set when the submission could not be resolved at all. */
   reason?: "not_found" | "unsupported"
 }
 
+/** One board: every option the player can pick, in display order. */
 export type Round<TPayload> = {
-  prompt: ContentItem<TPayload>
   options: ContentItem<TPayload>[]
 }
 
 export type ResolveAnswerInput<TPayload, TSettings> = {
-  prompt: ContentItem<TPayload>
   options: ContentItem<TPayload>[]
   settings: TSettings
   dictionary: readonly DictionaryEntry[]
@@ -36,6 +33,8 @@ export type BuildRoundInput<TPayload, TSettings> = {
   /** Deterministic hook so rounds are reproducible in tests and on the server. */
   random?: () => number
 }
+
+export type TimeoutPolicy = "lose-life" | "lose-match"
 
 /**
  * The contract every game type fulfils. Everything the engine, the panel and
@@ -53,14 +52,19 @@ export interface GameTypeDefinition<
   settingsSchema: z.ZodType<TSettings>
   /** When true, the panel requires a dictionary before enabling the mode. */
   requiresDictionary: boolean
+  /** What a selection timeout does to a live session. */
+  timeoutPolicy: TimeoutPolicy
+  /** Extra points paid when the board is completed. */
+  completionBonus: number
   /**
-   * Which payload fields the runtime uses to render a round. Declaring them here
-   * keeps the runtime, the panel and the API free of any game-type knowledge.
+   * Which payload fields the runtime uses to render a board. Declaring them
+   * here keeps the runtime, the panel and the API free of any game-type
+   * knowledge.
    */
   presentation: {
-    promptMediaField: string
     optionLabelField: string
-    promptCaptionField?: string
+    optionMediaField?: string
+    optionCaptionField?: string
   }
   /** Build one presentable round out of the instance pool. */
   buildRound(

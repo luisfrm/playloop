@@ -18,21 +18,22 @@ describe("describeObject", () => {
     expect(byName.label?.kind).toBe("string")
     // Long maxLength values are promoted to a textarea.
     expect(byName.mediaUrl?.kind).toBe("text")
-    expect(byName.isCorrectPool?.kind).toBe("boolean")
+    expect(byName.isTrue?.kind).toBe("boolean")
     // Optional in the schema, so the form marks it as not required.
     expect(byName.description?.required).toBe(false)
   })
 
-  it("exports the settings schema with its enum options", () => {
+  it("exports the base settings without game-specific knobs", () => {
     const { fields } = describeObject(trueFalseSettingsSchema)
-    const answerMode = fields.find((field) => field.name === "answerMode")
+    const names = fields.map((field) => field.name).sort()
 
-    expect(answerMode?.kind).toBe("enum")
-    expect(answerMode?.options?.map((option) => option.value)).toEqual([
-      "classic",
-      "expert",
+    expect(names).toEqual([
+      "lives",
+      "mode",
+      "questionTimeLimitSeconds",
+      "selectionTimeLimitSeconds",
+      "totalTimeLimitSeconds",
     ])
-    expect(answerMode?.defaultValue).toBe("classic")
   })
 
   it("keeps numeric bounds from the schema", () => {
@@ -91,22 +92,13 @@ describe("describeObject", () => {
     )
 
     expect(byName.lives?.label).toBe("Vidas")
-    expect(byName.answerMode?.label).toBe("Modo de respuesta")
-    expect(byName.answerMode?.options?.map((option) => option.label)).toEqual([
-      "Clásico",
-      "Experto",
-    ])
-    // Values stay English: only the visible labels are translated.
-    expect(byName.answerMode?.options?.map((option) => option.value)).toEqual([
-      "classic",
-      "expert",
-    ])
+    expect(byName.mode?.label).toBe("Modo de juego")
   })
 
   it("humanises field names for labels", () => {
     const { fields } = describeObject(
-      z.object({ isCorrectPool: z.boolean().default(true) })
+      z.object({ showOnBoard: z.boolean().default(true) })
     )
-    expect(fields[0]?.label).toBe("Is Correct Pool")
+    expect(fields[0]?.label).toBe("Show On Board")
   })
 })

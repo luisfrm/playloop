@@ -189,3 +189,15 @@ export function finishSession(
   if (isFinished(state.status)) return state
   return { ...state, status }
 }
+
+/**
+ * A completed board pays the game type's bonus on top of the gathered points.
+ * Losing keeps whatever was earned, without the bonus.
+ */
+export function completeSession(
+  state: SessionState,
+  bonus: number
+): SessionState {
+  if (isFinished(state.status)) return state
+  return { ...state, score: state.score + bonus, status: "won" }
+}

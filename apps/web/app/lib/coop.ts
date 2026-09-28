@@ -80,6 +80,13 @@ export function leaveRoom(
   return post(`/api/room/${code}`, { action: "leave", playerId })
 }
 
+export function restartRoom(
+  code: string,
+  playerId: string
+): Promise<RoomResponse> {
+  return post(`/api/room/${code}`, { action: "restart", playerId })
+}
+
 /**
  * Streams the room state. Returns a disposer.
  *

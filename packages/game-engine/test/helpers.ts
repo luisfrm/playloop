@@ -12,7 +12,7 @@ export function item(
     payload: {
       label: `Elemento ${id}`,
       mediaUrl: `https://example.invalid/${id}.png`,
-      isCorrectPool: true,
+      isTrue: true,
       ...payload,
     },
   }

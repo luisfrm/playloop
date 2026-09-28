@@ -1,7 +1,7 @@
 import type { ContentRepository } from "@playloop/db"
 import {
   baseSettingsSchema,
-  beginRound,
+  completeSession,
   countsForRanking,
   createSession,
   expireQuestion,
@@ -9,7 +9,6 @@ import {
   gameTypes,
   hasTimedOut,
   submitAnswer,
-  type AnswerResolution,
   type BaseSettings,
   type ContentItem,
   type GameInstance,
@@ -31,14 +30,23 @@ export type PlayStats = {
   status: SessionState["status"]
 }
 
+export type BoardChipView = {
+  id: string
+  label: string
+  mediaUrl: string
+  caption?: string
+  /** What the server already resolved for this cell, if anything. */
+  resolved: "true" | "false" | null
+}
+
 export type PlayView = {
   sessionId: string
   slug: string
-  answerMode: "classic" | "expert"
-  /** The prompt never carries its own label — that is the answer. */
-  prompt: { mediaUrl: string; caption?: string }
-  options: { id: string; label: string }[]
-  dictionary: { id: string; value: string }[]
+  board: BoardChipView[]
+  /** Targets found so far. */
+  found: number
+  /** Targets on the board. */
+  total: number
   stats: PlayStats
   questionDeadlineMs: number | null
   selectionDeadlineMs: number | null
@@ -47,25 +55,15 @@ export type PlayView = {
 
 export type AnswerResponse = {
   correct: boolean
-  revealed: { label: string; correctOptionId: string | null }
-  stats: PlayStats
-  /** The session goes on: the client asks for the next round to be served. */
-  hasNext: boolean
-  finished: boolean
-}
-
-/** What the client gets when it asks for the round after the feedback screen. */
-export type ServeNextResult = {
-  view: PlayView | null
+  /** The cell was already locked: nothing changed. */
+  alreadyResolved: boolean
+  view: PlayView
   finished: boolean
 }
 
 type Payload = Record<string, unknown>
 
-type AnyDefinition = GameTypeDefinition<
-  Payload,
-  BaseSettings & { answerMode?: "classic" | "expert" }
->
+type AnyDefinition = GameTypeDefinition<Payload, BaseSettings>
 
 function payloadOf(item: ContentItem<unknown>): Payload {
   return (item.payload ?? {}) as Payload
@@ -102,39 +100,71 @@ function deadlines(session: StoredSession, settings: BaseSettings) {
   }
 }
 
+function resolvedOf(
+  session: StoredSession,
+  id: string
+): BoardChipView["resolved"] {
+  if (!session.resolvedIds.includes(id)) return null
+  return session.trueIds.includes(id) ? "true" : "false"
+}
+
 function viewOf(
   session: StoredSession,
   definition: AnyDefinition,
-  prompt: ContentItem<Payload>,
   options: ContentItem<Payload>[]
 ): PlayView {
   const settings = session.settings as BaseSettings
   const presentation = definition.presentation
+  const byId = new Map(options.map((option) => [option.id, option]))
+
+  const board: BoardChipView[] = session.orderedIds.flatMap((id) => {
+    const item = byId.get(id)
+    if (!item) return []
+    const payload = payloadOf(item)
+    return [
+      {
+        id,
+        label: textOf(payload, presentation.optionLabelField),
+        mediaUrl: textOf(payload, presentation.optionMediaField),
+        caption: textOf(payload, presentation.optionCaptionField) || undefined,
+        resolved: resolvedOf(session, id),
+      },
+    ]
+  })
 
   return {
     sessionId: session.id,
     slug: session.slug,
-    answerMode: session.answerMode,
-    prompt: {
-      mediaUrl: textOf(payloadOf(prompt), presentation.promptMediaField),
-      caption:
-        textOf(payloadOf(prompt), presentation.promptCaptionField) || undefined,
-    },
-    options: options.map((option) => ({
-      id: option.id,
-      label: textOf(payloadOf(option), presentation.optionLabelField),
-    })),
-    dictionary:
-      session.answerMode === "expert"
-        ? session.dictionary.map((entry) => ({
-            id: entry.id,
-            value: entry.value,
-          }))
-        : [],
+    board,
+    found: session.trueIds.filter((id) => session.resolvedIds.includes(id))
+      .length,
+    total: session.trueIds.length,
     stats: statsOf(session.state),
     ...deadlines(session, settings),
     countsForRanking: countsForRanking(session.state),
   }
+}
+
+/**
+ * The target set, frozen at start. Derived through the authoritative check
+ * itself, so this service never reads a game-type field directly.
+ */
+function targetIdsOf(
+  definition: AnyDefinition,
+  options: ContentItem<Payload>[],
+  settings: BaseSettings
+): string[] {
+  return options
+    .filter(
+      (option) =>
+        definition.resolveAnswer({
+          options,
+          settings,
+          dictionary: [],
+          answer: { kind: "option", contentItemId: option.id },
+        }).correct
+    )
+    .map((option) => option.id)
 }
 
 export type StartInput = {
@@ -142,27 +172,20 @@ export type StartInput = {
   store: SessionStore
   instance: GameInstance
   playerId: string
-  /** Client-chosen mode; the server validates it against the instance gate. */
-  requestedMode: "classic" | "expert"
   random?: () => number
 }
 
 export class PlayError extends Error {
   constructor(
     message: string,
-    readonly code:
-      | "not_found"
-      | "invalid_settings"
-      | "no_content"
-      | "expert_unavailable"
-      | "expired"
+    readonly code: "not_found" | "invalid_settings" | "no_content" | "expired"
   ) {
     super(message)
   }
 }
 
 export async function startSession(input: StartInput): Promise<PlayView> {
-  const { repository, store, instance, playerId, requestedMode } = input
+  const { repository, store, instance, playerId } = input
   const definition = gameTypes.require(instance.gameTypeKey) as AnyDefinition
 
   const settingsResult = definition.settingsSchema.safeParse(instance.settings)
@@ -177,27 +200,6 @@ export async function startSession(input: StartInput): Promise<PlayView> {
   const content = (await repository.listContent(
     instance.id
   )) as ContentItem<Payload>[]
-  if (content.length < 2) {
-    throw new PlayError(
-      "La instancia todavía no tiene suficiente contenido.",
-      "no_content"
-    )
-  }
-
-  const dictionary = await repository.listDictionary(instance.id)
-  const answerMode =
-    requestedMode === "expert" &&
-    instance.expertModeEnabled &&
-    dictionary.length > 0
-      ? "expert"
-      : "classic"
-
-  if (requestedMode === "expert" && answerMode === "classic") {
-    throw new PlayError(
-      "El modo experto no está disponible para esta instancia.",
-      "expert_unavailable"
-    )
-  }
 
   const round = definition.buildRound({
     pool: content,
@@ -205,7 +207,10 @@ export async function startSession(input: StartInput): Promise<PlayView> {
     random: input.random,
   })
   if (!round) {
-    throw new PlayError("No se pudo preparar una ronda.", "no_content")
+    throw new PlayError(
+      "La instancia todavía no tiene contenido suficiente.",
+      "no_content"
+    )
   }
 
   const state = createSession({
@@ -216,74 +221,51 @@ export async function startSession(input: StartInput): Promise<PlayView> {
     now: Date.now(),
   })
 
+  const orderedIds = round.options.map((option) => option.id)
   const session: StoredSession = {
     id: state.sessionId,
     instanceId: instance.id,
     slug: instance.slug,
     playerId,
     settings,
-    answerMode,
     state,
-    promptId: round.prompt.id,
-    optionIds: round.options.map((option) => option.id),
-    askedIds: [round.prompt.id],
+    orderedIds,
+    trueIds: targetIdsOf(definition, round.options, settings),
+    resolvedIds: [],
     bestStreak: 0,
-    dictionary,
     expiresAt: Date.now() + SESSION_TTL_MS,
   }
 
   await store.put(session)
-  return viewOf(session, definition, round.prompt, round.options)
+  return viewOf(session, definition, round.options)
 }
 
 export type AnswerInput = {
   repository: ContentRepository
   store: SessionStore
   session: StoredSession
-  /** The chosen option (classic) or dictionary entry (expert). */
+  /** The picked board cell. */
   answerId: string
 }
 
-async function loadRoundParts(
+async function loadBoard(
   repository: ContentRepository,
   session: StoredSession
-): Promise<{ prompt: ContentItem<Payload>; options: ContentItem<Payload>[] }> {
+): Promise<ContentItem<Payload>[]> {
   const items = (await repository.listContent(
     session.instanceId
   )) as ContentItem<Payload>[]
   const byId = new Map(items.map((item) => [item.id, item]))
 
-  const prompt = byId.get(session.promptId)
-  const options = session.optionIds
+  return session.orderedIds
     .map((id) => byId.get(id))
     .filter((item): item is ContentItem<Payload> => item !== undefined)
-
-  if (!prompt)
-    throw new PlayError(
-      "La sesión apunta a contenido que ya no existe.",
-      "not_found"
-    )
-  return { prompt, options }
-}
-
-function nextRound(
-  session: StoredSession,
-  definition: AnyDefinition,
-  pool: ContentItem<Payload>[],
-  random: (() => number) | undefined
-): { prompt: ContentItem<Payload>; options: ContentItem<Payload>[] } | null {
-  const fresh = pool.filter((item) => !session.askedIds.includes(item.id))
-  const usable = fresh.length >= 2 ? fresh : pool
-  return definition.buildRound({
-    pool: usable,
-    settings: session.settings as BaseSettings,
-    random,
-  })
 }
 
 /**
  * The single place a score can change. The client sends an opaque id; the
- * resolution happens here, against the real content.
+ * resolution happens here, against the real content. Re-picking a locked cell
+ * — or inventing an id — changes nothing.
  */
 export async function answerRound(input: AnswerInput): Promise<AnswerResponse> {
   const { repository, store, session, answerId } = input
@@ -292,116 +274,79 @@ export async function answerRound(input: AnswerInput): Promise<AnswerResponse> {
       "true_false"
   ) as AnyDefinition
 
-  const { prompt, options } = await loadRoundParts(repository, session)
-
-  const resolution: AnswerResolution = definition.resolveAnswer({
-    prompt,
-    options,
-    settings: session.settings as BaseSettings,
-    dictionary: session.dictionary,
-    answer:
-      session.answerMode === "expert"
-        ? { kind: "entry", dictionaryEntryId: answerId }
-        : { kind: "option", contentItemId: answerId },
-  })
-
   const settings = session.settings as BaseSettings
   const now = Date.now()
-  const outcome = submitAnswer(session.state, settings, resolution, now)
-
-  const revealed = {
-    label: textOf(payloadOf(prompt), definition.presentation.optionLabelField),
-    correctOptionId: resolution.askedContentItemId,
-  }
+  const options = await loadBoard(repository, session)
 
   if (
-    outcome.state.status !== "running" ||
-    hasTimedOut(outcome.state, settings, now)
+    session.state.status !== "running" ||
+    hasTimedOut(session.state, settings, now)
   ) {
-    const finished =
-      outcome.state.status === "running"
-        ? finishSession(outcome.state)
-        : outcome.state
-    await store.put({ ...session, state: finished, awaitingNext: false })
+    const state =
+      session.state.status === "running"
+        ? finishSession(session.state, "expired")
+        : session.state
+    const finishedSession = { ...session, state }
+    await store.put(finishedSession)
     return {
-      correct: outcome.correct,
-      revealed,
-      stats: statsOf(finished),
-      hasNext: false,
+      correct: false,
+      alreadyResolved: false,
+      view: viewOf(finishedSession, definition, options),
       finished: true,
     }
   }
 
-  // The next round is not built yet: the clock starts when it is served, so the
-  // feedback screen cannot eat the selection time.
-  await store.put({
-    ...session,
-    state: outcome.state,
-    bestStreak: Math.max(session.bestStreak, outcome.state.streak),
-    awaitingNext: true,
-    expiresAt: now + SESSION_TTL_MS,
-  })
-
-  return {
-    correct: outcome.correct,
-    revealed,
-    stats: statsOf(outcome.state),
-    hasNext: true,
-    finished: false,
-  }
-}
-
-/**
- * Serves the round that follows a feedback screen and restarts the selection
- * clock from *now*. Called when the player is ready, never at answer time.
- */
-export async function serveNextRound(input: {
-  repository: ContentRepository
-  store: SessionStore
-  session: StoredSession
-  random?: () => number
-}): Promise<ServeNextResult> {
-  const { repository, store, session, random } = input
-  const definition = gameTypes.require(
-    (await repository.getInstanceById(session.instanceId))?.gameTypeKey ??
-      "true_false"
-  ) as AnyDefinition
-
-  // Asking twice (a reload, a double click) just returns the round on screen.
-  if (!session.awaitingNext) {
-    const { prompt, options } = await loadRoundParts(repository, session)
+  if (
+    !session.orderedIds.includes(answerId) ||
+    session.resolvedIds.includes(answerId)
+  ) {
     return {
-      view: viewOf(session, definition, prompt, options),
+      correct: false,
+      alreadyResolved: true,
+      view: viewOf(session, definition, options),
       finished: false,
     }
   }
 
-  const now = Date.now()
-  const pool = (await repository.listContent(
-    session.instanceId
-  )) as ContentItem<Payload>[]
-  const round = nextRound(session, definition, pool, random)
+  const resolution = definition.resolveAnswer({
+    options,
+    settings,
+    dictionary: [],
+    answer: { kind: "option", contentItemId: answerId },
+  })
+  const outcome = submitAnswer(session.state, settings, resolution, now)
+  const resolvedIds = [...session.resolvedIds, answerId]
+  // Content removed mid-game cannot block the win: only targets still on the
+  // board count.
+  const openTargets = session.trueIds.filter((id) =>
+    options.some((option) => option.id === id)
+  )
 
-  if (!round) {
-    const finished = finishSession(session.state)
-    await store.put({ ...session, state: finished, awaitingNext: false })
-    return { view: null, finished: true }
+  let state = outcome.state
+  let finished = state.status !== "running"
+  if (
+    !finished &&
+    resolution.correct &&
+    openTargets.every((id) => resolvedIds.includes(id))
+  ) {
+    state = completeSession(state, definition.completionBonus)
+    finished = true
   }
 
   const updated: StoredSession = {
     ...session,
-    state: beginRound(session.state, now),
-    promptId: round.prompt.id,
-    optionIds: round.options.map((option) => option.id),
-    askedIds: [...session.askedIds, round.prompt.id],
-    awaitingNext: false,
+    state,
+    resolvedIds,
+    bestStreak: Math.max(session.bestStreak, state.streak),
     expiresAt: now + SESSION_TTL_MS,
   }
   await store.put(updated)
 
   return {
-    view: viewOf(updated, definition, round.prompt, round.options),
-    finished: false,
+    correct: outcome.correct,
+    alreadyResolved: false,
+    view: viewOf(updated, definition, options),
+    finished,
   }
 }
 
@@ -417,40 +362,40 @@ export async function expireRound(input: {
       "true_false"
   ) as AnyDefinition
 
-  const { prompt } = await loadRoundParts(repository, session)
   const settings = session.settings as BaseSettings
   const now = Date.now()
-  const outcome = expireQuestion(session.state, settings, now)
+  const options = await loadBoard(repository, session)
 
-  const revealed = {
-    label: textOf(payloadOf(prompt), definition.presentation.optionLabelField),
-    correctOptionId: session.promptId,
-  }
-
-  if (outcome.state.status !== "running") {
-    await store.put({ ...session, state: outcome.state, awaitingNext: false })
+  if (session.state.status !== "running") {
     return {
       correct: false,
-      revealed,
-      stats: statsOf(outcome.state),
-      hasNext: false,
+      alreadyResolved: false,
+      view: viewOf(session, definition, options),
       finished: true,
     }
   }
 
-  await store.put({
+  // The board's timeout policy decides: lose the whole run, or a single life.
+  const state =
+    definition.timeoutPolicy === "lose-match"
+      ? finishSession(
+          session.state,
+          hasTimedOut(session.state, settings, now) ? "expired" : "lost"
+        )
+      : expireQuestion(session.state, settings, now).state
+  const finished = state.status !== "running"
+  const updated: StoredSession = {
     ...session,
-    state: outcome.state,
-    awaitingNext: true,
+    state,
     expiresAt: now + SESSION_TTL_MS,
-  })
+  }
+  await store.put(updated)
 
   return {
     correct: false,
-    revealed,
-    stats: statsOf(outcome.state),
-    hasNext: true,
-    finished: false,
+    alreadyResolved: false,
+    view: viewOf(updated, definition, options),
+    finished,
   }
 }
 

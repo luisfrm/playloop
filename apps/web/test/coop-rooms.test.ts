@@ -1,100 +1,65 @@
 import { MemoryRepository, seedDemoInstance } from "@playloop/db"
-import {
-  baseSettingsSchema,
-  gameTypes,
-  type ContentItem,
-} from "@playloop/game-engine"
+import { gameTypes, type BaseSettings } from "@playloop/game-engine"
 import { describe, expect, it } from "vitest"
 
-import { buildRoomRounds } from "@/lib/coop.server"
+import { buildRoomBoard } from "@/lib/coop.server"
 
-type BuildInput = Parameters<typeof buildRoomRounds>[0]
+type BoardInput = Parameters<typeof buildRoomBoard>[0]
 
-async function fixture(count = 3): Promise<BuildInput> {
+async function pool() {
   const repository = new MemoryRepository()
   const instance = await seedDemoInstance(repository)
+  const definition = gameTypes.require(
+    instance.gameTypeKey
+  ) as BoardInput["definition"]
+  const settings = {
+    ...(instance.settings as Record<string, unknown>),
+  } as BaseSettings
   const content = (await repository.listContent(
     instance.id
-  )) as unknown as ContentItem<Record<string, unknown>>[]
-
-  return {
-    definition: gameTypes.require(
-      instance.gameTypeKey
-    ) as BuildInput["definition"],
-    pool: content,
-    settings: baseSettingsSchema.parse({}),
-    count,
-  }
+  )) as BoardInput["pool"]
+  return { definition, settings, content }
 }
 
 const seeded = () => 0.15
 
-describe("buildRoomRounds", () => {
-  it("freezes the requested number of rounds up front", async () => {
-    const { rounds } = buildRoomRounds({
-      ...(await fixture(3)),
+describe("buildRoomBoard", () => {
+  it("freezes the whole pool into a single board with sealed targets", async () => {
+    const { definition, settings, content } = await pool()
+    const built = buildRoomBoard({
+      definition,
+      pool: content,
+      settings,
       random: seeded,
     })
-    expect(rounds).toHaveLength(3)
+
+    expect(built).not.toBeNull()
+    expect(built?.board.optionIds).toHaveLength(6)
+    expect(built?.board.correctIds).toHaveLength(4)
+    expect(built?.board.foundIds).toEqual([])
+    expect(built?.board.falseIds).toEqual([])
   })
 
-  it("gives every round at least two options and an answer among them", async () => {
-    const { rounds } = buildRoomRounds({
-      ...(await fixture(4)),
+  it("labels and illustrates every cell", async () => {
+    const { definition, settings, content } = await pool()
+    const built = buildRoomBoard({
+      definition,
+      pool: content,
+      settings,
       random: seeded,
     })
 
-    for (const round of rounds) {
-      expect(round.optionIds.length).toBeGreaterThanOrEqual(2)
-      expect(round.optionIds).toContain(round.answerOptionId)
+    expect(built).not.toBeNull()
+    for (const id of built?.board.optionIds ?? []) {
+      expect(built?.optionLabels[id]?.length ?? 0).toBeGreaterThan(0)
+      expect(built?.optionMedia[id]).toContain("picsum.photos")
     }
   })
 
-  it("labels every option it publishes", async () => {
-    const index = await fixture()
-    const { rounds, optionLabels } = buildRoomRounds({
-      ...index,
-      random: seeded,
-    })
-
-    for (const round of rounds) {
-      for (const optionId of round.optionIds) {
-        expect(optionLabels[optionId]?.length ?? 0).toBeGreaterThan(0)
-      }
-    }
-  })
-
-  it("resolves the answer through the game type, not a guess", async () => {
-    const index = await fixture()
-    const { rounds } = buildRoomRounds({ ...index, random: seeded })
-
-    // `true_false` shows an item and asks which item it is, so the option whose
-    // media matches the prompt is the answer. That is what `resolveAnswer` says
-    // too — this asserts the room used it rather than assuming the first option.
-    const byMedia = new Map(
-      index.pool.map((item) => [
-        String(item.payload["mediaUrl"] ?? ""),
-        item.id,
-      ])
-    )
-
-    for (const round of rounds) {
-      expect(byMedia.get(round.prompt.mediaUrl)).toBe(round.answerOptionId)
-    }
-  })
-
-  it("carries the prompt media so the room can render without the content", async () => {
-    const { rounds } = buildRoomRounds({ ...(await fixture()), random: seeded })
-    expect(rounds.every((round) => round.prompt.mediaUrl.length > 0)).toBe(true)
-  })
-
-  it("keeps serving rounds even when the pool is smaller than the queue", async () => {
-    const index = await fixture(10)
-    const { rounds } = buildRoomRounds({
-      ...index,
-      pool: index.pool.slice(0, 2),
-      random: seeded,
-    })
-    expect(rounds.length).toBeGreaterThan(0)
+  it("returns null when the pool cannot make a board", async () => {
+    const { definition, settings } = await pool()
+    expect(
+      buildRoomBoard({ definition, pool: [], settings, random: seeded })
+    ).toBeNull()
   })
 })

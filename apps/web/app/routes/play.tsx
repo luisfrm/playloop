@@ -25,17 +25,12 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     )
   }
 
-  const [content, dictionary] = await Promise.all([
-    repository.listContent(instance.id),
-    repository.listDictionary(instance.id),
-  ])
+  const content = await repository.listContent(instance.id)
 
   return {
     title: instance.title,
     description: instance.description ?? "",
     slug: instance.slug,
-    expertModeEnabled: instance.expertModeEnabled,
-    dictionarySize: dictionary.length,
     contentSize: content.length,
     canPlay: content.length >= 2,
     /** Cooperative play needs a Durable Object binding, absent in memory-only dev. */
@@ -48,7 +43,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
   return [{ title: `${title} · Playloop` }]
 }
 
-type Phase = "idle" | "playing" | "feedback" | "finished"
+type Phase = "idle" | "playing" | "finished"
 
 type PlayError = { error?: string }
 
@@ -74,7 +69,6 @@ export default function Play() {
   const player = usePlayer()
 
   const [phase, setPhase] = useState<Phase>("idle")
-  const [mode, setMode] = useState<"classic" | "expert">("classic")
   const [view, setView] = useState<PlayView | null>(null)
   const [result, setResult] = useState<AnswerResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -118,13 +112,19 @@ export default function Play() {
   )
 
   const start = useCallback(async () => {
-    const payload = await send({ action: "start", slug: loaderData.slug, mode })
+    const payload = await send({ action: "start", slug: loaderData.slug })
     if (payload.view) {
       setView(payload.view)
       setResult(null)
       setPhase("playing")
     }
-  }, [loaderData.slug, mode, send])
+  }, [loaderData.slug, send])
+
+  const applyResult = useCallback((answer: AnswerResponse) => {
+    setView(answer.view)
+    setResult(answer)
+    setPhase(answer.finished ? "finished" : "playing")
+  }, [])
 
   const answer = useCallback(
     async (answerId: string) => {
@@ -134,10 +134,9 @@ export default function Play() {
         answerId,
       })
       if (!payload.result) return
-      setResult(payload.result)
-      setPhase(payload.result.finished ? "finished" : "feedback")
+      applyResult(payload.result)
     },
-    [send, view?.sessionId]
+    [applyResult, send, view?.sessionId]
   )
 
   const downloadForOffline = useCallback(async () => {
@@ -184,22 +183,8 @@ export default function Play() {
     if (!view) return
     const payload = await send({ action: "expire", sessionId: view.sessionId })
     if (!payload.result) return
-    setResult(payload.result)
-    setPhase(payload.result.finished ? "finished" : "feedback")
-  }, [send, view])
-
-  // The server serves the round, so the selection clock starts when it appears
-  // on screen and not when the previous answer was sent.
-  const continueRound = useCallback(async () => {
-    const payload = await send({ action: "next", sessionId: view?.sessionId })
-    if (!payload.view) {
-      setPhase("finished")
-      return
-    }
-    setView(payload.view)
-    setResult(null)
-    setPhase("playing")
-  }, [send, view?.sessionId])
+    applyResult(payload.result)
+  }, [applyResult, send, view])
 
   return (
     <div className="flex min-h-svh flex-col">
@@ -211,16 +196,13 @@ export default function Play() {
         result={result}
         error={error}
         busy={busy}
-        mode={mode}
         offline={offline}
         coop={coop}
-        onModeChange={setMode}
         onStart={start}
         onAnswer={answer}
         onExpire={expire}
         onDownload={downloadForOffline}
         onStartCoop={startCoop}
-        onContinue={() => void continueRound()}
         onRestart={() => {
           setView(null)
           setResult(null)
@@ -242,21 +224,15 @@ function PlayStage(props: {
   result: AnswerResponse | null
   error: string | null
   busy: boolean
-  mode: "classic" | "expert"
   offline: "idle" | "saving" | "saved" | "error"
   coop: "idle" | "creating"
-  onModeChange: (mode: "classic" | "expert") => void
   onStart: () => void
   onAnswer: (answerId: string) => void
   onExpire: () => void
   onDownload: () => void
   onStartCoop: () => void
-  onContinue: () => void
   onRestart: () => void
 }) {
-  const expertAvailable =
-    props.loaderData.expertModeEnabled && props.loaderData.dictionarySize > 0
-
   return (
     <main className="mx-auto w-full max-w-[64rem] flex-1 px-[clamp(1rem,4vw,1.5rem)] py-10">
       <header className="flex flex-col gap-2 border-b pb-6">
@@ -268,9 +244,6 @@ function PlayStage(props: {
         </p>
         <div className="flex flex-wrap gap-2 pt-1">
           <Badge accent="pear">{props.loaderData.contentSize} elementos</Badge>
-          {expertAvailable ? (
-            <Badge accent="cyan">Modo experto disponible</Badge>
-          ) : null}
         </div>
       </header>
 
@@ -288,9 +261,6 @@ function PlayStage(props: {
           <StartPanel
             slug={props.loaderData.slug}
             canPlay={props.loaderData.canPlay}
-            expertAvailable={expertAvailable}
-            mode={props.mode}
-            onModeChange={props.onModeChange}
             onStart={props.onStart}
             busy={props.busy}
             offline={props.offline}
@@ -310,15 +280,12 @@ function PlayStage(props: {
           />
         ) : null}
 
-        {(props.phase === "feedback" || props.phase === "finished") &&
-        props.view ? (
+        {props.phase === "finished" && props.view ? (
           <FeedbackStage
             view={props.view}
             result={props.result}
-            finished={props.phase === "finished"}
             busy={props.busy}
             rankingHref={`/ranking/${props.loaderData.slug}`}
-            onContinue={props.onContinue}
             onRestart={props.onRestart}
           />
         ) : null}
@@ -327,25 +294,23 @@ function PlayStage(props: {
   )
 }
 
-/** Reads the answer feedback defensively: the payload is optional mid-round. */
+/** The final board, with the score and the way out. */
 function FeedbackStage(props: {
   view: PlayView
   result: AnswerResponse | null
-  finished: boolean
   busy: boolean
   rankingHref: string
-  onContinue: () => void
   onRestart: () => void
 }) {
   return (
     <FeedbackPanel
-      stats={props.result?.stats ?? props.view.stats}
+      stats={props.view.stats}
       correct={props.result?.correct ?? false}
-      revealedLabel={props.result?.revealed.label ?? ""}
-      finished={props.finished}
+      revealedLabel=""
+      finished
       busy={props.busy}
       rankingHref={props.rankingHref}
-      onContinue={props.onContinue}
+      onContinue={props.onRestart}
       onRestart={props.onRestart}
     />
   )
@@ -354,9 +319,6 @@ function FeedbackStage(props: {
 function StartPanel(props: {
   slug: string
   canPlay: boolean
-  expertAvailable: boolean
-  mode: "classic" | "expert"
-  onModeChange: (mode: "classic" | "expert") => void
   onStart: () => void
   busy: boolean
   offline: "idle" | "saving" | "saved" | "error"
@@ -376,35 +338,10 @@ function StartPanel(props: {
 
   return (
     <div className="flex flex-col gap-5 rounded-[var(--radius-lg)] border bg-card p-6">
-      <fieldset className="flex flex-col gap-3">
-        <legend className="text-sm font-medium">Cómo quieres jugar</legend>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant={props.mode === "classic" ? "default" : "outline"}
-            size="lg"
-            aria-pressed={props.mode === "classic"}
-            onClick={() => props.onModeChange("classic")}
-          >
-            Clásico
-          </Button>
-          <Button
-            type="button"
-            variant={props.mode === "expert" ? "default" : "outline"}
-            size="lg"
-            disabled={!props.expertAvailable}
-            aria-pressed={props.mode === "expert"}
-            onClick={() => props.onModeChange("expert")}
-          >
-            Experto
-          </Button>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          {props.expertAvailable
-            ? "En modo experto eliges la respuesta del diccionario, nunca escribes libre."
-            : "El modo experto se activa cuando la instancia tiene un diccionario cargado."}
-        </p>
-      </fieldset>
+      <p className="text-sm text-muted-foreground">
+        Marca todos los elementos verdaderos del tablero. Cada falso cuesta una
+        vida; completar el tablero suma 2 puntos extra.
+      </p>
 
       <Button
         type="button"

@@ -10,7 +10,6 @@ import { loadOfflineInstance, removeOfflineInstance } from "@/lib/offline"
 import {
   answerPractice,
   expirePractice,
-  nextPracticeRound,
   practiceView,
   startPractice,
   type PracticeAnswer,
@@ -21,7 +20,7 @@ import type { Route } from "./+types/practice"
 
 /**
  * Client-only on purpose: a downloaded game has to be playable with no network,
- * so the data comes from IndexedDB and the whole round loop runs here. Nothing
+ * so the data comes from IndexedDB and the whole board loop runs here. Nothing
  * about this page may depend on a server loader.
  */
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
@@ -42,36 +41,29 @@ export function meta({ params }: Route.MetaArgs) {
   return [{ title: `Práctica · ${params.slug ?? "Playloop"}` }]
 }
 
-type Phase = "idle" | "playing" | "feedback" | "finished"
+type Phase = "idle" | "playing" | "finished"
 
 export default function Practice() {
   const { instance } = useLoaderData<typeof clientLoader>()
   const { slug = "" } = useParams()
   const [phase, setPhase] = useState<Phase>("idle")
-  const [mode, setMode] = useState<"classic" | "expert">("classic")
   const [state, setState] = useState<PracticeState | null>(null)
-  const [result, setResult] = useState<{
-    correct: boolean
-    revealedLabel: string
-  } | null>(null)
+  const [lastCorrect, setLastCorrect] = useState(false)
 
   const view = useMemo(() => (state ? practiceView(state) : null), [state])
 
   const start = useCallback(() => {
     if (!instance) return
-    const started = startPractice(instance, mode)
+    const started = startPractice(instance)
     setState(started)
-    setResult(null)
+    setLastCorrect(false)
     setPhase(started ? "playing" : "idle")
-  }, [instance, mode])
+  }, [instance])
 
   const apply = useCallback((outcome: PracticeAnswer) => {
     setState(outcome.state)
-    setResult({
-      correct: outcome.correct,
-      revealedLabel: outcome.revealedLabel,
-    })
-    setPhase(outcome.state.finished ? "finished" : "feedback")
+    setLastCorrect(outcome.correct)
+    setPhase(outcome.state.finished ? "finished" : "playing")
   }, [])
 
   const answer = useCallback(
@@ -84,19 +76,6 @@ export default function Practice() {
   const expire = useCallback(() => {
     if (state && !state.finished) apply(expirePractice(state))
   }, [apply, state])
-
-  const advance = useCallback(() => {
-    if (!state) return
-    const next = nextPracticeRound(state)
-    if (!next) {
-      setState({ ...state, finished: true })
-      setPhase("finished")
-      return
-    }
-    setState(next)
-    setResult(null)
-    setPhase("playing")
-  }, [state])
 
   if (!instance) {
     return (
@@ -133,10 +112,7 @@ export default function Practice() {
         {phase === "idle" ? (
           <StartPanel
             slug={instance.slug}
-            hasDictionary={instance.dictionary.length > 0}
             contentSize={instance.content.length}
-            mode={mode}
-            onModeChange={setMode}
             onStart={start}
           />
         ) : null}
@@ -150,18 +126,20 @@ export default function Practice() {
           />
         ) : null}
 
-        {(phase === "feedback" || phase === "finished") && view ? (
+        {phase === "finished" && view ? (
           <FeedbackPanel
             stats={view.stats}
-            correct={result?.correct ?? false}
-            revealedLabel={result?.revealedLabel ?? ""}
-            finished={phase === "finished"}
+            correct={lastCorrect}
+            revealedLabel=""
+            finished
             busy={false}
             rankingHref={null}
-            onContinue={advance}
+            onContinue={() => {
+              setState(null)
+              setPhase("idle")
+            }}
             onRestart={() => {
               setState(null)
-              setResult(null)
               setPhase("idle")
             }}
           />
@@ -185,10 +163,7 @@ function PracticeShell({ children }: { children: ReactNode }) {
 
 function StartPanel(props: {
   slug: string
-  hasDictionary: boolean
   contentSize: number
-  mode: "classic" | "expert"
-  onModeChange: (mode: "classic" | "expert") => void
   onStart: () => void
 }) {
   const [removed, setRemoved] = useState(false)
@@ -203,30 +178,10 @@ function StartPanel(props: {
 
   return (
     <div className="flex flex-col gap-5 rounded-[var(--radius-lg)] border bg-card p-6">
-      <fieldset className="flex flex-col gap-3">
-        <legend className="text-sm font-medium">Cómo quieres jugar</legend>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant={props.mode === "classic" ? "default" : "outline"}
-            size="lg"
-            aria-pressed={props.mode === "classic"}
-            onClick={() => props.onModeChange("classic")}
-          >
-            Clásico
-          </Button>
-          <Button
-            type="button"
-            variant={props.mode === "expert" ? "default" : "outline"}
-            size="lg"
-            disabled={!props.hasDictionary}
-            aria-pressed={props.mode === "expert"}
-            onClick={() => props.onModeChange("expert")}
-          >
-            Experto
-          </Button>
-        </div>
-      </fieldset>
+      <p className="text-sm text-muted-foreground">
+        Marca todos los elementos verdaderos del tablero. Cada falso cuesta una
+        vida; completar el tablero suma 2 puntos extra.
+      </p>
 
       <Button type="button" size="lg" onClick={props.onStart}>
         Empezar

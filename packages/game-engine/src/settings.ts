@@ -36,14 +36,6 @@ export const baseSettingsSchema = z.object({
     .default(15)
     .meta({ title: "Tiempo para elegir (segundos)" }),
   lives: z.number().int().min(1).max(10).default(3).meta({ title: "Vidas" }),
-  /** Ruleset knobs a game type may share: how many options a round shows. */
-  optionCount: z
-    .number()
-    .int()
-    .min(2)
-    .max(8)
-    .default(4)
-    .meta({ title: "Opciones por ronda" }),
 })
 
 export type BaseSettings = z.infer<typeof baseSettingsSchema>

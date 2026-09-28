@@ -1,13 +1,13 @@
 import { Badge } from "@playloop/ui/components/badge"
 import { Button } from "@playloop/ui/components/button"
-import { Input } from "@playloop/ui/components/input"
-import { useEffect, useMemo, useState } from "react"
+import { Check, X } from "lucide-react"
+import { useEffect, useState } from "react"
 import { Link } from "react-router"
 
 /**
- * The two panels a session is made of, kept independent of where the score came
- * from. The online flow resolves it on the server; offline practice resolves it
- * in the browser. Both render exactly the same UI.
+ * The board a session is made of, kept independent of where the score came
+ * from. The online flow resolves it on the server; offline practice resolves
+ * it in the browser. Both render exactly the same UI.
  */
 
 export type PlayStatsView = {
@@ -17,11 +17,18 @@ export type PlayStatsView = {
   roundsPlayed: number
 }
 
+export type BoardChipView = {
+  id: string
+  label: string
+  mediaUrl: string
+  caption?: string
+  resolved: "true" | "false" | null
+}
+
 export type RoundView = {
-  answerMode: "classic" | "expert"
-  prompt: { mediaUrl: string; caption?: string }
-  options: { id: string; label: string }[]
-  dictionary: { id: string; value: string }[]
+  board: BoardChipView[]
+  found: number
+  total: number
   stats: PlayStatsView
   selectionDeadlineMs: number | null
 }
@@ -54,20 +61,7 @@ export function RoundPanel(props: {
   onExpire: () => void
 }) {
   const { view } = props
-  const [query, setQuery] = useState("")
   const remaining = useCountdown(view.selectionDeadlineMs, props.onExpire)
-
-  const options = useMemo<{ id: string; label: string }[]>(() => {
-    if (view.answerMode === "classic") return view.options
-
-    const needle = query.trim().toLowerCase()
-    return view.dictionary
-      .filter((entry) =>
-        needle ? entry.value.toLowerCase().includes(needle) : true
-      )
-      .slice(0, 8)
-      .map((entry) => ({ id: entry.id, label: entry.value }))
-  }, [query, view.answerMode, view.dictionary, view.options])
 
   return (
     <div className="flex flex-col gap-5">
@@ -76,6 +70,7 @@ export function RoundPanel(props: {
           <Stat label="Puntos" value={view.stats.score} />
           <Stat label="Vidas" value={view.stats.lives} />
           <Stat label="Racha" value={view.stats.streak} />
+          <Stat label="Encontrados" value={view.found} />
         </dl>
         {remaining !== null ? (
           <Badge accent={remaining < 5000 ? "coral" : "neutral"}>
@@ -84,74 +79,56 @@ export function RoundPanel(props: {
         ) : null}
       </div>
 
-      <img
-        src={view.prompt.mediaUrl}
-        alt=""
-        width={800}
-        height={500}
-        className="aspect-[8/5] w-full rounded-[var(--radius-lg)] border object-cover"
-      />
-      {view.prompt.caption ? (
-        <p className="text-sm text-muted-foreground">{view.prompt.caption}</p>
-      ) : null}
+      <p className="text-sm text-muted-foreground">
+        Marca todos los verdaderos: {view.found} de {view.total}. Cada falso
+        cuesta una vida.
+      </p>
 
-      {view.answerMode === "expert" ? (
-        <div className="flex flex-col gap-3">
-          <label className="text-sm font-medium" htmlFor="expert-answer">
-            Busca la respuesta en el diccionario
-          </label>
-          <Input
-            id="expert-answer"
-            size="lg"
-            role="combobox"
-            aria-expanded={options.length > 0}
-            aria-controls="expert-options"
-            autoComplete="off"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Escribe para filtrar…"
-          />
-          <ul
-            id="expert-options"
-            role="listbox"
-            className="flex flex-col gap-2"
-          >
-            {options.map((entry) => (
-              <li key={entry.id}>
-                <Button
-                  type="button"
-                  role="option"
-                  aria-selected={false}
-                  variant="outline"
-                  size="lg"
-                  className="w-full justify-start"
-                  disabled={props.busy}
-                  onClick={() => props.onAnswer(entry.id)}
-                >
-                  {entry.label}
-                </Button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : (
-        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {options.map((option) => (
-            <li key={option.id}>
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                className="w-full justify-start whitespace-normal"
-                disabled={props.busy}
-                onClick={() => props.onAnswer(option.id)}
-              >
-                {option.label}
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
+      <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {view.board.map((chip) => (
+          <li key={chip.id}>
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className={
+                chip.resolved === "true"
+                  ? "w-full justify-start border-success bg-success/10 whitespace-normal"
+                  : chip.resolved === "false"
+                    ? "w-full justify-start border-destructive bg-destructive/10 whitespace-normal"
+                    : "w-full justify-start whitespace-normal"
+              }
+              disabled={props.busy || chip.resolved !== null}
+              aria-pressed={chip.resolved === "true"}
+              onClick={() => props.onAnswer(chip.id)}
+            >
+              {chip.resolved === "true" ? (
+                <Check aria-hidden="true" className="size-4 shrink-0" />
+              ) : chip.resolved === "false" ? (
+                <X aria-hidden="true" className="size-4 shrink-0" />
+              ) : null}
+              {chip.mediaUrl ? (
+                <img
+                  src={chip.mediaUrl}
+                  alt=""
+                  width={80}
+                  height={80}
+                  loading="lazy"
+                  className="size-10 shrink-0 rounded-[var(--radius-md)] border object-cover"
+                />
+              ) : null}
+              <span className="flex min-w-0 flex-col items-start gap-1">
+                <span className="[overflow-wrap:anywhere]">{chip.label}</span>
+                {chip.caption ? (
+                  <span className="text-xs font-normal text-muted-foreground">
+                    {chip.caption}
+                  </span>
+                ) : null}
+              </span>
+            </Button>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }

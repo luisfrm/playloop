@@ -213,9 +213,9 @@ export async function seedDemoInstance(
     title: "Tema de prueba",
     description: "Instancia de demostración con contenido ficticio.",
     theme: { name: "Tema de prueba", colors: {}, texts: {} },
-    settings: { mode: "solo", answerMode: "classic", lives: 3, optionCount: 4 },
+    settings: { mode: "solo", lives: 3 },
     published: true,
-    expertModeEnabled: true,
+    expertModeEnabled: false,
     createdAt: now,
     updatedAt: now,
   }
@@ -226,7 +226,7 @@ export async function seedDemoInstance(
       label: `Elemento ${index}`,
       mediaUrl: `https://picsum.photos/seed/playloop-${index}/800/500`,
       description: `Descripción de prueba ${index}.`,
-      isCorrectPool: true,
+      isTrue: index % 3 !== 0,
     }))
   )
   await repository.replaceDictionary(

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import { baseSettingsSchema } from "../src/settings.js"
 import {
   beginRound,
+  completeSession,
   countsForRanking,
   createSession,
   expireQuestion,
@@ -160,5 +161,21 @@ describe("finishSession", () => {
   it("does not resurrect a finished session", () => {
     const lost = { ...fresh(), status: "lost" as const }
     expect(finishSession(lost).status).toBe("lost")
+  })
+})
+
+describe("completeSession", () => {
+  it("pays the game type bonus on top of the gathered points", () => {
+    const scored = submitAnswer(fresh(), settings, right, 2_000).state
+    const done = completeSession(scored, 2)
+    expect(done.status).toBe("won")
+    expect(done.score).toBe(3)
+  })
+
+  it("does not resurrect a finished session", () => {
+    const lost = { ...fresh(), status: "lost" as const }
+    const done = completeSession(lost, 2)
+    expect(done.status).toBe("lost")
+    expect(done.score).toBe(0)
   })
 })

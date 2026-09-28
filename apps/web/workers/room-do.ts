@@ -1,22 +1,21 @@
 import { DurableObject } from "cloudflare:workers"
 
 import {
-  advanceRoom,
   alarmAt,
   createRoom,
-  everyoneAnswered,
-  finishRoom,
-  isQuestionExpired,
+  expireTurn,
+  isTurnExpired,
   joinRoom,
   leaveRoom,
   markDisconnected,
   publicRoomState,
+  restartRoom,
   shouldDestroy,
   startRoom,
   submitRoomAnswer,
+  type RoomBoard,
   type RoomCommand,
   type RoomPublicState,
-  type RoomRound,
   type RoomState,
 } from "@playloop/game-engine"
 
@@ -86,7 +85,7 @@ export class RoomDurableObject extends DurableObject<Env> {
   }
 
   /**
-   * Create or reuse the room for this code. The rounds arrive ready-made: the
+   * Create or reuse the room for this code. The board arrives ready-made: the
    * room never reads content, so it stays game-type agnostic.
    */
   async create(input: {
@@ -96,9 +95,11 @@ export class RoomDurableObject extends DurableObject<Env> {
     gameSlug: string
     hostId: string
     hostName: string
-    rounds: RoomRound[]
+    board: RoomBoard
     optionLabels: Record<string, string>
-    questionDurationMs: number
+    optionMedia: Record<string, string>
+    turnDurationMs: number
+    initialLives: number
   }): Promise<void> {
     if (this.room) return
     await this.persist(createRoom({ ...input, now: Date.now() }))
@@ -122,24 +123,26 @@ export class RoomDurableObject extends DurableObject<Env> {
 
   async answer(playerId: string, optionId: string): Promise<RoomActionResult> {
     if (!this.room) return { ok: false, reason: "no_room", room: null }
+    return this.apply(
+      submitRoomAnswer(this.room, playerId, optionId, Date.now())
+    )
+  }
 
-    const command = submitRoomAnswer(this.room, playerId, optionId, Date.now())
-    if (!command.ok) {
-      return { ok: false, reason: command.reason, room: this.snapshotOf() }
-    }
-
-    // Everyone answered: the room serves the next round itself, and ends when
-    // the queue runs out. The alarm does the same when the clock runs out —
-    // progression never belongs to a client.
-    let next = command.state
-    if (everyoneAnswered(next)) {
-      const now = Date.now()
-      const advanced = advanceRoom(next, now)
-      next = advanced.ok ? advanced.state : finishRoom(next, now)
-    }
-
-    await this.persist(next)
-    return { ok: true, room: this.snapshotOf() }
+  async restart(
+    playerId: string,
+    board: RoomBoard,
+    optionLabels: Record<string, string>,
+    optionMedia: Record<string, string>
+  ): Promise<RoomActionResult> {
+    if (!this.room) return { ok: false, reason: "no_room", room: null }
+    return this.apply(
+      restartRoom(
+        this.room,
+        playerId,
+        { board, optionLabels, optionMedia },
+        Date.now()
+      )
+    )
   }
 
   snapshot(): RoomPublicState | null {
@@ -161,11 +164,10 @@ export class RoomDurableObject extends DurableObject<Env> {
       return
     }
 
-    if (room.phase === "playing" && isQuestionExpired(room, now)) {
-      // The question ran out: move on without waiting for the stragglers. When
-      // the queue is empty the room is over.
-      const advanced = advanceRoom(room, now)
-      await this.persist(advanced.ok ? advanced.state : finishRoom(room, now))
+    if (room.phase === "playing" && isTurnExpired(room, now)) {
+      // The holder stalled: they lose a life and the table moves on.
+      const stalled = expireTurn(room, now)
+      if (stalled.ok) await this.persist(stalled.state)
       return
     }
 

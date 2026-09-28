@@ -32,8 +32,13 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
   const env = getEnv(context)
 
   return {
-    /** The schema field that holds this game type's media, straight from its contract. */
-    mediaField: definition.presentation.promptMediaField,
+    /**
+     * The schema field that holds this game type's media, straight from its
+     * contract. Null when the type has no media: the upload slot hides.
+     */
+    mediaField: definition.presentation.optionMediaField ?? null,
+    /** The panel only offers expert mode and dictionaries to types that need them. */
+    requiresDictionary: definition.requiresDictionary,
     uploadsEnabled: isR2Configured(
       r2ConfigFromEnv({
         R2_S3_ENDPOINT: env.R2_S3_ENDPOINT,
@@ -197,21 +202,23 @@ export default function AdminInstance() {
               />
               Publicado
             </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                name="expertModeEnabled"
-                defaultChecked={loaderData.instance.expertModeEnabled}
-                disabled={!canEnableExpert}
-                className="size-4 accent-[var(--primary)]"
-              />
-              Modo experto
-              {!canEnableExpert ? (
-                <span className="text-xs text-muted-foreground">
-                  (requiere diccionario)
-                </span>
-              ) : null}
-            </label>
+            {loaderData.requiresDictionary ? (
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="expertModeEnabled"
+                  defaultChecked={loaderData.instance.expertModeEnabled}
+                  disabled={!canEnableExpert}
+                  className="size-4 accent-[var(--primary)]"
+                />
+                Modo experto
+                {!canEnableExpert ? (
+                  <span className="text-xs text-muted-foreground">
+                    (requiere diccionario)
+                  </span>
+                ) : null}
+              </label>
+            ) : null}
           </div>
 
           <SchemaForm
@@ -233,9 +240,7 @@ export default function AdminInstance() {
             type="button"
             variant="outline"
             size="lg"
-            onClick={() =>
-              setContent((items) => [...items, { isCorrectPool: true }])
-            }
+            onClick={() => setContent((items) => [...items, { isTrue: true }])}
           >
             Añadir elemento
           </Button>
@@ -286,21 +291,23 @@ export default function AdminInstance() {
                       )
                     }
                   />
-                  <MediaUpload
-                    instanceId={loaderData.instance.id}
-                    field={mediaField}
-                    currentUrl={stringField(item, mediaField)}
-                    enabled={loaderData.uploadsEnabled}
-                    onUploaded={(url) =>
-                      setContent((items) =>
-                        items.map((current, i) =>
-                          i === index
-                            ? { ...current, [mediaField]: url }
-                            : current
+                  {mediaField ? (
+                    <MediaUpload
+                      instanceId={loaderData.instance.id}
+                      field={mediaField}
+                      currentUrl={stringField(item, mediaField)}
+                      enabled={loaderData.uploadsEnabled}
+                      onUploaded={(url) =>
+                        setContent((items) =>
+                          items.map((current, i) =>
+                            i === index
+                              ? { ...current, [mediaField]: url }
+                              : current
+                          )
                         )
-                      )
-                    }
-                  />
+                      }
+                    />
+                  ) : null}
                 </li>
               ))}
             </ul>
@@ -312,28 +319,30 @@ export default function AdminInstance() {
         </Form>
       </section>
 
-      <Form method="post" className="flex flex-col gap-4">
-        <input type="hidden" name="intent" value="dictionary" />
-        <div className="border-b pb-4">
-          <h2 className="font-heading text-xl font-bold">Diccionario</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Una entrada por línea. Los alias van separados por <code>|</code>.
-            El modo experto autocompleta solo con estas entradas.
-          </p>
-        </div>
-        <textarea
-          name="dictionaryText"
-          rows={8}
-          value={dictionaryText}
-          onChange={(event) => setDictionaryText(event.target.value)}
-          className="w-full rounded-[var(--radius-md)] border bg-card px-3.5 py-2 font-mono text-sm"
-          placeholder={"Elemento Uno | Uno | 1\nElemento Dos"}
-        />
-        <DictionaryImport onLoaded={setDictionaryText} />
-        <Button type="submit" size="lg" disabled={busy}>
-          Guardar diccionario
-        </Button>
-      </Form>
+      {loaderData.requiresDictionary ? (
+        <Form method="post" className="flex flex-col gap-4">
+          <input type="hidden" name="intent" value="dictionary" />
+          <div className="border-b pb-4">
+            <h2 className="font-heading text-xl font-bold">Diccionario</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Una entrada por línea. Los alias van separados por <code>|</code>.
+              El modo experto autocompleta solo con estas entradas.
+            </p>
+          </div>
+          <textarea
+            name="dictionaryText"
+            rows={8}
+            value={dictionaryText}
+            onChange={(event) => setDictionaryText(event.target.value)}
+            className="w-full rounded-[var(--radius-md)] border bg-card px-3.5 py-2 font-mono text-sm"
+            placeholder={"Elemento Uno | Uno | 1\nElemento Dos"}
+          />
+          <DictionaryImport onLoaded={setDictionaryText} />
+          <Button type="submit" size="lg" disabled={busy}>
+            Guardar diccionario
+          </Button>
+        </Form>
+      ) : null}
     </div>
   )
 }

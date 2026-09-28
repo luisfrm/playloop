@@ -1,11 +1,11 @@
-import type { DictionaryEntry, SessionState } from "@playloop/game-engine"
+import type { SessionState } from "@playloop/game-engine"
 import type { RouterContextProvider } from "react-router"
 
 import { cloudflareContext } from "./cloudflare-context"
 
 /**
  * Server-side session records. The client only ever holds an opaque session id;
- * the prompt, the options and the score all live here. That is what makes the
+ * the board, the targets and the score all live here. That is what makes the
  * "the client never decides if it was right" rule enforceable.
  */
 export type StoredSession = {
@@ -15,21 +15,15 @@ export type StoredSession = {
   playerId: string
   /** Validated with the instance's game type settings schema before storing. */
   settings: unknown
-  answerMode: "classic" | "expert"
   state: SessionState
-  /** The answer. Never serialised to the client. */
-  promptId: string
-  optionIds: string[]
-  askedIds: string[]
+  /** Board order, frozen at start: the board never reshuffles mid-game. */
+  orderedIds: string[]
+  /** The ids the player must find. Frozen at start; never sent to the client. */
+  trueIds: string[]
+  /** Ids already picked, true or false: locked cells. */
+  resolvedIds: string[]
   bestStreak: number
-  dictionary: DictionaryEntry[]
   expiresAt: number
-  /**
-   * True between an answer and the moment the next round is served: the round
-   * parts still point at the answered prompt, so nothing can resolve it twice
-   * and no clock is running for a round the player cannot see yet.
-   */
-  awaitingNext?: boolean
   /**
    * Set the first time the session's score reaches the ranking. A resent
    * answer on an already-finished session must not write a second score row.

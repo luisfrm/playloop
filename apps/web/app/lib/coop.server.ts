@@ -6,9 +6,9 @@ import {
   type BaseSettings,
   type ContentItem,
   type GameTypeDefinition,
+  type RoomBoard,
   type RoomErrorReason,
   type RoomPublicState,
-  type RoomRound,
 } from "@playloop/game-engine"
 
 import type { CloudflareEnv } from "./cloudflare-context"
@@ -38,13 +38,21 @@ type RoomStub = {
     gameSlug: string
     hostId: string
     hostName: string
-    rounds: RoomRound[]
+    board: RoomBoard
     optionLabels: Record<string, string>
-    questionDurationMs: number
+    optionMedia: Record<string, string>
+    turnDurationMs: number
+    initialLives: number
   }): Promise<void>
   join(playerId: string, name: string): Promise<RoomActionResult>
   start(playerId: string): Promise<RoomActionResult>
   answer(playerId: string, optionId: string): Promise<RoomActionResult>
+  restart(
+    playerId: string,
+    board: RoomBoard,
+    optionLabels: Record<string, string>,
+    optionMedia: Record<string, string>
+  ): Promise<RoomActionResult>
   leave(playerId: string): Promise<RoomActionResult>
   snapshot(): Promise<RoomPublicState | null>
   fetch(request: Request): Promise<Response>
@@ -54,17 +62,12 @@ type RoomNamespace = { getByName(name: string): RoomStub }
 
 type Payload = Record<string, unknown>
 
-type AnyDefinition = GameTypeDefinition<
-  Payload,
-  BaseSettings & { answerMode?: "classic" | "expert" }
->
+type AnyDefinition = GameTypeDefinition<Payload, BaseSettings>
 
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 const CODE_LENGTH = 6
-/** A room is a session, not an endless quiz: ten rounds is plenty. */
-const ROUNDS_PER_ROOM = 10
 const ROOM_PATH = /^\/api\/room(?:\/([A-Za-z0-9]+))?$/
-const DEFAULT_QUESTION_SECONDS = 30
+const DEFAULT_TURN_SECONDS = 15
 
 const REASON_MESSAGES: Record<RoomErrorReason, string> = {
   no_room: "Esa sala ya no existe.",
@@ -73,9 +76,9 @@ const REASON_MESSAGES: Record<RoomErrorReason, string> = {
   not_a_member: "No estás en esta sala.",
   not_the_host: "Solo quien creó la sala puede empezarla.",
   wrong_phase: "La sala ya no acepta esa acción.",
-  already_answered: "Ya has respondido a esta pregunta.",
+  not_your_turn: "Espera tu turno para elegir.",
   unknown_option: "Esa opción no es válida.",
-  exhausted: "No quedan más preguntas.",
+  already_resolved: "Esa casilla ya está resuelta.",
 }
 
 function json(body: unknown, status = 200): Response {
@@ -110,86 +113,83 @@ function mintRoomCode(): string {
     .join("")
 }
 
-function questionDurationMs(settings: BaseSettings): number {
-  const seconds = settings.questionTimeLimitSeconds ?? DEFAULT_QUESTION_SECONDS
+function turnDurationMs(settings: BaseSettings): number {
+  const seconds = settings.selectionTimeLimitSeconds ?? DEFAULT_TURN_SECONDS
   return seconds * 1000
 }
 
 /**
- * Which option of a round is the correct one.
+ * Which board cells must be found.
  *
  * Asked of the game type rather than assumed: `resolveAnswer` is the single
  * definition of "correct", so a new game type needs no change here.
  */
-function answerOptionOf(
+function correctIdsOf(
   definition: AnyDefinition,
-  round: { prompt: ContentItem<Payload>; options: ContentItem<Payload>[] },
+  options: ContentItem<Payload>[],
   settings: BaseSettings
-): string {
-  const correct = round.options.find(
-    (option) =>
-      definition.resolveAnswer({
-        prompt: round.prompt,
-        options: round.options,
-        settings,
-        dictionary: [],
-        answer: { kind: "option", contentItemId: option.id },
-      }).correct
-  )
-  return correct?.id ?? round.prompt.id
+): string[] {
+  return options
+    .filter(
+      (option) =>
+        definition.resolveAnswer({
+          options,
+          settings,
+          dictionary: [],
+          answer: { kind: "option", contentItemId: option.id },
+        }).correct
+    )
+    .map((option) => option.id)
 }
 
 /**
- * Freezes the instance's content into the queue of rounds the room walks
- * through. Built once, up front, so the room never reads content and the answer
- * only ever exists inside the Durable Object.
+ * Freezes the instance's content into the single board the match is played
+ * on. Built once, up front, so the room never reads content and the answers
+ * only ever exist inside the Durable Object.
  */
-export function buildRoomRounds(input: {
+export function buildRoomBoard(input: {
   definition: AnyDefinition
   pool: ContentItem<Payload>[]
   settings: BaseSettings
   random?: () => number
-  count?: number
-}): { rounds: RoomRound[]; optionLabels: Record<string, string> } {
+}): {
+  board: RoomBoard
+  optionLabels: Record<string, string>
+  optionMedia: Record<string, string>
+} | null {
   const random = input.random ?? Math.random
-  const count = input.count ?? ROUNDS_PER_ROOM
   const presentation = input.definition.presentation
 
-  const rounds: RoomRound[] = []
+  const round = input.definition.buildRound({
+    pool: input.pool,
+    settings: input.settings,
+    random,
+  })
+  if (!round) return null
+
   const optionLabels: Record<string, string> = {}
-  const asked: string[] = []
-
-  for (let index = 0; index < count; index++) {
-    const fresh = input.pool.filter((item) => !asked.includes(item.id))
-    const usable = fresh.length >= 2 ? fresh : input.pool
-    const round = input.definition.buildRound({
-      pool: usable,
-      settings: input.settings,
-      random,
-    })
-    if (!round) break
-
-    for (const option of round.options) {
-      optionLabels[option.id] = textOf(
-        option.payload,
-        presentation.optionLabelField
-      )
-    }
-
-    rounds.push({
-      prompt: {
-        mediaUrl: textOf(round.prompt.payload, presentation.promptMediaField),
-        caption:
-          textOf(round.prompt.payload, presentation.promptCaptionField) ||
-          undefined,
-      },
-      optionIds: round.options.map((option) => option.id),
-      answerOptionId: answerOptionOf(input.definition, round, input.settings),
-    })
-    asked.push(round.prompt.id)
+  const optionMedia: Record<string, string> = {}
+  for (const option of round.options) {
+    optionLabels[option.id] = textOf(
+      option.payload,
+      presentation.optionLabelField
+    )
+    optionMedia[option.id] = textOf(
+      option.payload,
+      presentation.optionMediaField
+    )
   }
 
-  return { rounds, optionLabels }
+  return {
+    board: {
+      optionIds: round.options.map((option) => option.id),
+      correctIds: correctIdsOf(input.definition, round.options, input.settings),
+      foundIds: [],
+      falseIds: [],
+    },
+    optionLabels,
+    optionMedia,
+  }
 }
 
 async function rememberPlayer(
@@ -264,20 +264,13 @@ async function createRoomRequest(
   const pool = (await repository.listContent(
     instance.id
   )) as ContentItem<Payload>[]
-  if (pool.length < 2) {
+
+  const built = buildRoomBoard({ definition, pool, settings })
+  if (!built) {
     return json(
       { error: "Este juego todavía no tiene contenido suficiente." },
       409
     )
-  }
-
-  const { rounds, optionLabels } = buildRoomRounds({
-    definition,
-    pool,
-    settings,
-  })
-  if (rounds.length === 0) {
-    return json({ error: "No se pudo preparar ninguna ronda." }, 409)
   }
 
   const code = mintRoomCode()
@@ -289,9 +282,11 @@ async function createRoomRequest(
     gameSlug: instance.slug,
     hostId: playerId,
     hostName: name.name,
-    rounds,
-    optionLabels,
-    questionDurationMs: questionDurationMs(settings),
+    board: built.board,
+    optionLabels: built.optionLabels,
+    optionMedia: built.optionMedia,
+    turnDurationMs: turnDurationMs(settings),
+    initialLives: settings.lives,
   })
   await rememberPlayer(repository, playerId, name.name)
 
@@ -325,6 +320,40 @@ function roomPayload(result: RoomActionResult): RoomActionResult & {
   }
 }
 
+/**
+ * A finished room plays again without losing its members or totals. The fresh
+ * board is built here — the Durable Object never reads content.
+ */
+async function restartRoomRequest(
+  env: CloudflareEnv,
+  stub: RoomStub,
+  playerId: string
+): Promise<Response> {
+  const slug = (await stub.snapshot())?.gameSlug
+  const repository = await repositoryFromEnv(env)
+  const instance = slug ? await repository.getInstanceBySlug(slug) : null
+  if (!instance || !instance.published) {
+    return json({ error: "Esa sala ya no existe." }, 404)
+  }
+
+  const { definition, settings } = await loadSettings(instance)
+  const pool = (await repository.listContent(
+    instance.id
+  )) as ContentItem<Payload>[]
+  const built = buildRoomBoard({ definition, pool, settings })
+  if (!built) {
+    return json({ error: "No se pudo preparar el tablero." }, 409)
+  }
+
+  const result = await stub.restart(
+    playerId,
+    built.board,
+    built.optionLabels,
+    built.optionMedia
+  )
+  return json(roomPayload(result), result.ok ? 200 : 409)
+}
+
 async function roomActionRequest(
   request: Request,
   env: CloudflareEnv,
@@ -341,6 +370,10 @@ async function roomActionRequest(
   if (action === "start") {
     const result = await stub.start(playerId)
     return json(roomPayload(result), result.ok ? 200 : 409)
+  }
+
+  if (action === "restart") {
+    return restartRoomRequest(env, stub, playerId)
   }
 
   if (action === "leave") {
