@@ -41,7 +41,7 @@ packages/
 
 Cada `GameType` (el primero a implementar: `true_false`) declara, vía Zod:
 
-- **Content schema**: forma de cada elemento de contenido. Para `true_false`: `{ label: string, imageUrl: string, description?: string, isCorrectPool: boolean }`.
+- **Content schema**: forma de cada elemento de contenido. Para `true_false`: `{ label: string, imageUrl: string, description?: string, isTrue: boolean }`.
 - **Settings schema**: forma de la configuración de ese tipo (modo, tiempos, vidas, etc.).
 
 El panel renderiza formularios **dinámicamente** a partir de estos schemas. Agregar un `GameType` nuevo no debe requerir tocar el CRUD del panel — solo registrar su schema y validador en `game-engine`.
@@ -50,25 +50,38 @@ Cada `GameInstance` referencia un `GameType`, tiene su propio `theme` (para bran
 
 ---
 
-## 5. Primer tipo de juego: True/False
+## 5. Primer tipo de juego: True/False (tablero multiselección)
 
-### Modo clásico
-El jugador ve una imagen y varias opciones (una correcta según `isCorrectPool`). Selecciona una; si acierta, suma punto y avanza; si falla, pierde.
+Un tablero único con todos los elementos de la instancia; el conteo de
+verdaderos es dinámico (`isTrue`), nunca una constante. Cada selección es una
+ronda con feedback inmediato: verdadero → +1 punto y la casilla se bloquea en
+verde; falso → −1 vida y la casilla se bloquea en rojo. Re-marcar una casilla
+bloqueada no suma ni resta. Victoria = marcar todos los verdaderos con vidas
+restantes → +2 puntos extra; el timeout (o quedarse sin vidas) es derrota y se
+conserva lo sumado, sin bonus. Publicar exige ≥1 verdadero, ≥1 falso y ≥2
+elementos.
 
-### Modo experto — autocompletado sobre diccionario
-En vez de texto libre con tolerancia a errores:
+### Salas: turnos estrictos sobre el tablero compartido
+Cada ronda cada miembro en pie elige una casilla en orden fijo de asientos, con
+temporizador por turno (agotarlo cuesta una vida, sin revelar nada). Las
+casillas resueltas se bloquean para todos. Puntuación: +1 por cada ronda
+adicional que se empieza en pie (la primera da 0), +2 por ganar. La partida
+termina cuando una ronda arrancaría con un solo jugador en pie (ese gana), con
+ninguno (sin bonus), o al marcarse todos los verdaderos (ganan todos los en
+pie, +2 cada uno). Al terminar se puede jugar otra dentro de la misma sala, con
+marcador por partida y acumulado global.
 
-- Cada `GameInstance` puede tener un **diccionario** (`DictionaryEntry`): lista curada de valores válidos para ese tema.
-- El input de modo experto es un **combobox/autocompletar** (componente `Command` de shadcn) que sugiere solo entradas del diccionario.
-- El jugador **selecciona** una entrada, no escribe libremente — la respuesta siempre se valida contra un `id`, sin ambigüedad de typos.
-- **Modo experto queda deshabilitado por instancia hasta que exista un diccionario cargado para ella.** El panel permite cargarlo manualmente o por importación (CSV).
-- El diccionario es independiente del `ContentItem`: el diccionario es el universo de respuestas válidas para autocompletar; el `ContentItem` define qué se pregunta.
+### Diccionario (infraestructura, sin modo que lo use hoy)
+Cada `GameInstance` puede tener un **diccionario** (`DictionaryEntry`): lista
+curada de valores. La infra (tabla, importación CSV, validación) se conserva
+para futuros tipos; el panel solo ofrece el modo experto y la sección de
+diccionario a los tipos que declaran `requiresDictionary`.
 
 ### Regla no negociable (con matiz en la sección 7): validación server-side
 En modo online/conectado, el cliente nunca decide si acertó. Envía el `id` seleccionado; el Worker/Durable Object resuelve contra el contenido real.
 
 ### Settings configurables por instancia
-Modo (clásico/experto), tiempo límite total, tiempo límite por pregunta, tiempo de selección, número de vidas.
+Tiempos límite (total, por pregunta, de selección) y número de vidas.
 
 ---
 
@@ -137,8 +150,8 @@ Presigned URLs generadas por un endpoint del Worker (no binding directo desde el
 Juegos
   Tipos de juego         (GameType)
   Instancias de juego    (GameInstance — cada una con su propio theme y contenido)
-  Contenido             (ContentItem: label, imagen, descripción)
-  Diccionarios          (DictionaryEntry, para modo experto, por instancia)
+  Contenido             (ContentItem: label, imagen, descripción, es verdadero)
+  Diccionarios          (DictionaryEntry, solo para tipos que lo requieren)
 Ranking / Moderación
 Configuración
 ```

@@ -84,13 +84,20 @@ async function elementCard(page: Page, index: number) {
 }
 
 /**
- * Walks the real panel: create, fill content, fill dictionary, publish. This is
+ * Walks the real panel: create, fill content, flag the misses, publish. This is
  * the path that used to fail with a foreign-key error, so it doubles as the
  * regression test for it.
  */
 export async function publishGame(
   page: Page,
-  spec: { title: string; slug: string; items: ItemSpec[] }
+  spec: {
+    title: string
+    slug: string
+    items: ItemSpec[]
+    /** Item indexes that are misses. New elements are targets by default. */
+    falseIndexes?: number[]
+    lives?: number
+  }
 ): Promise<void> {
   await page.goto("/admin/new")
   await page.getByLabel("Título").fill(spec.title)
@@ -105,40 +112,33 @@ export async function publishGame(
   for (const [index, entry] of spec.items.entries()) {
     await page.getByRole("button", { name: "Añadir elemento" }).click()
     const card = await elementCard(page, index)
-    await card.locator("#field-label").fill(entry.label)
-    await card.locator("#field-mediaUrl").fill(entry.mediaUrl)
+    await card.locator(`#element-${index}-label`).fill(entry.label)
+    await card.locator(`#element-${index}-mediaUrl`).fill(entry.mediaUrl)
+    if (spec.falseIndexes?.includes(index)) {
+      await card.getByLabel("Es verdadero").uncheck()
+    }
   }
   await submit(page, "Guardar contenido", instancePath)
 
   // Reloading proves the write landed, rather than trusting the client state.
   await page.reload()
   for (const [index, entry] of spec.items.entries()) {
-    await expect(
-      (await elementCard(page, index)).locator("#field-label")
-    ).toHaveValue(entry.label)
+    const card = await elementCard(page, index)
+    await expect(card.locator(`#element-${index}-label`)).toHaveValue(
+      entry.label
+    )
+    if (spec.falseIndexes?.includes(index)) {
+      await expect(card.getByLabel("Es verdadero")).not.toBeChecked()
+    } else {
+      await expect(card.getByLabel("Es verdadero")).toBeChecked()
+    }
   }
 
-  await page
-    .locator('textarea[name="dictionaryText"]')
-    .fill(spec.items.map((entry) => entry.label).join("\n"))
-  await submit(page, "Guardar diccionario", instancePath)
-
+  if (spec.lives !== undefined) {
+    await page.locator("#field-lives").fill(String(spec.lives))
+  }
   await page.getByLabel("Publicado").check()
   await submit(page, "Guardar ajustes", instancePath)
   await page.reload()
   await expect(page.getByLabel("Publicado")).toBeChecked()
-}
-
-/**
- * The correct option is the item whose media is on screen, so a spec can answer
- * deliberately right or wrong instead of hoping.
- */
-export async function correctLabelFor(
-  page: Page,
-  items: ItemSpec[]
-): Promise<string> {
-  const source = await page.locator("img").first().getAttribute("src")
-  const prompt = items.find((entry) => entry.mediaUrl === source)
-  expect(prompt, `no item matches the prompt image ${source}`).toBeTruthy()
-  return prompt!.label
 }

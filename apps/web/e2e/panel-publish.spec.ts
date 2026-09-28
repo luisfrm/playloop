@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test"
 
-import { item, loginAsOperator, publishGame, submit } from "./helpers"
+import { item, loginAsOperator, publishGame } from "./helpers"
 
 const ITEMS = [
   item(1, "Alfa"),
@@ -52,33 +52,6 @@ test("a published game shows up in the catalogue and a draft does not", async ({
   ).toHaveCount(0)
   await page.goto("/game/todavia-borrador")
   await expect(page.getByText("Ese juego no existe")).toBeVisible()
-})
-
-test("the dictionary can be loaded from a file and then saved", async ({
-  page,
-}) => {
-  await loginAsOperator(page)
-
-  await page.goto("/admin/new")
-  await page.getByLabel("Título").fill("Diccionario por archivo")
-  await page.getByLabel("Slug").fill("diccionario-por-archivo")
-  await page.getByRole("button", { name: "Crear juego" }).click()
-  await expect(page).toHaveURL(/\/admin\/games\/[0-9a-f-]+$/)
-  const instancePath = new URL(page.url()).pathname
-
-  await page.getByLabel("Importar diccionario desde un archivo").setInputFiles({
-    name: "diccionario.csv",
-    mimeType: "text/csv",
-    buffer: Buffer.from("Alfa | A\nBravo | B"),
-  })
-
-  const textarea = page.locator('textarea[name="dictionaryText"]')
-  await expect(textarea).toHaveValue("Alfa | A\nBravo | B")
-
-  // Reloading proves the entries reached D1, not just the textarea.
-  await submit(page, "Guardar diccionario", instancePath)
-  await page.reload()
-  await expect(textarea).toHaveValue("Alfa | A\nBravo | B")
 })
 
 test("the panel lists what was created and can delete it", async ({ page }) => {

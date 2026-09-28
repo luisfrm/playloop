@@ -62,4 +62,13 @@ describe("SchemaForm", () => {
     expect(screen.getByLabelText(/imagen/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/es verdadero/i)).toBeInTheDocument()
   })
+
+  it("prefixes control ids so repeated forms keep unique labels", () => {
+    const { container } = renderForm({ idPrefix: "element-2" })
+
+    expect(container.querySelector("#element-2-label")).not.toBeNull()
+    expect(screen.getByLabelText(/etiqueta/i).getAttribute("id")).toBe(
+      "element-2-label"
+    )
+  })
 })

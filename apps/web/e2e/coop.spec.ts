@@ -1,7 +1,6 @@
 import { expect, test } from "@playwright/test"
 
 import {
-  correctLabelFor,
   item,
   loginAsOperator,
   publishGame,
@@ -15,13 +14,23 @@ const ITEMS = [
   item(3, "Charlie"),
   item(4, "Delta"),
 ]
+// Bravo and Delta are misses; Alfa and Charlie are the targets.
+const FALSE = [1, 3]
 
 /** Room codes avoid characters that are easy to confuse when read aloud. */
 const ROOM_URL = /\/room\/[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]+$/
 
-test("two players share one authoritative room", async ({ browser, page }) => {
+test("two players share one authoritative board in strict turns", async ({
+  browser,
+  page,
+}) => {
   await loginAsOperator(page)
-  await publishGame(page, { title: "Sala e2e", slug: "sala-e2e", items: ITEMS })
+  await publishGame(page, {
+    title: "Sala e2e",
+    slug: "sala-e2e",
+    items: ITEMS,
+    falseIndexes: FALSE,
+  })
 
   await page.goto("/game/sala-e2e")
   await setPlayerName(page, "Host")
@@ -54,39 +63,40 @@ test("two players share one authoritative room", async ({ browser, page }) => {
 
   await page.getByRole("button", { name: "Empezar la partida" }).click()
 
-  // Both screens show the same prompt: the room decides it, not the browser.
-  await expect(page.locator("img")).toBeVisible()
-  await expect(guest.locator("img")).toBeVisible()
+  // Both screens show the same board: the room decides it, not the browser.
+  for (const label of ["Alfa", "Bravo", "Charlie", "Delta"]) {
+    await expect(page.getByRole("button", { name: label })).toBeVisible()
+    await expect(guest.getByRole("button", { name: label })).toBeVisible()
+  }
 
-  const hostPrompt = await page.locator("img").first().getAttribute("src")
-  const guestPrompt = await guest.locator("img").first().getAttribute("src")
-  expect(hostPrompt).toBe(guestPrompt)
-  expect(ITEMS.map((entry) => entry.mediaUrl)).toContain(hostPrompt)
+  // Strict turns: the guest cannot pick while the host holds the turn.
+  await expect(guest.getByText("Turno de Host")).toBeVisible()
+  await expect(page.getByText("Es tu turno")).toBeVisible()
+  await expect(guest.getByRole("button", { name: "Alfa" })).toBeDisabled()
 
-  const correct = await correctLabelFor(page, ITEMS)
+  // The host marks a target: it locks on both screens and the turn passes.
+  await page.getByRole("button", { name: "Alfa" }).click()
+  await expect(guest.getByRole("button", { name: "Alfa" })).toBeDisabled()
+  await expect(guest.getByText("Es tu turno")).toBeVisible()
 
-  await page.getByRole("button", { name: correct, exact: true }).click()
-  await expect(page.getByText(/Respuesta enviada/)).toBeVisible()
-  // The room counted one answer and is still waiting for the other player.
-  await expect(page.getByText("Han respondido").locator("..")).toHaveText(
-    "Han respondido1"
-  )
+  // The guest misses: they lose a life and the host plays again.
+  await guest.getByRole("button", { name: "Bravo" }).click()
+  await expect(page.getByText("Es tu turno")).toBeVisible()
 
-  await guest.getByRole("button", { name: correct, exact: true }).click()
+  // The last target completes the board: everyone standing shares the win.
+  await page.getByRole("button", { name: "Charlie" }).click()
+  await expect(page.getByText("Gana Host")).toBeVisible()
+  await expect(guest.getByText("Gana Host")).toBeVisible()
+  await expect(page.getByText("Acumulado de la sala")).toBeVisible()
 
-  // Everyone answered, so the room served round two by itself — on both
-  // screens, because the Durable Object is what advances.
-  await expect(
-    page.getByText("Pregunta", { exact: true }).locator("..")
-  ).toHaveText("Pregunta2")
-  await expect(
-    guest.getByText("Pregunta", { exact: true }).locator("..")
-  ).toHaveText("Pregunta2")
-
-  // The host's score lives on the server: the guest's screen shows it too.
-  await expect(
-    guest.locator("li").filter({ hasText: "Host" }).first()
-  ).toContainText("Host")
+  // A new match starts inside the same room on a fresh board. The starter
+  // rotates, so the guest holds the first turn of match two.
+  await page.getByRole("button", { name: "Jugar otra" }).click()
+  await expect(page.getByText("Ronda", { exact: true })).toBeVisible()
+  await expect(guest.getByText("Es tu turno")).toBeVisible()
+  await expect(page.getByText("Turno de Invitada")).toBeVisible()
+  await expect(guest.getByRole("button", { name: "Alfa" })).toBeEnabled()
+  await expect(page.getByRole("button", { name: "Alfa" })).toBeDisabled()
 
   await guestContext.close()
 })

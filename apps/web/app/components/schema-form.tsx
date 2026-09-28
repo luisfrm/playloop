@@ -14,6 +14,8 @@ export type SchemaFormProps = {
   submitLabel?: string
   busy?: boolean
   error?: string | null
+  /** Prefix for control ids. Repeated forms pass their own (see FieldInput). */
+  idPrefix?: string
 }
 
 function setPath(
@@ -84,6 +86,7 @@ export function SchemaForm(props: SchemaFormProps) {
               onChange={(next) =>
                 props.onChange(setPath(props.value, field.name, next))
               }
+              idPrefix={props.idPrefix}
             />
           </div>
         ))}

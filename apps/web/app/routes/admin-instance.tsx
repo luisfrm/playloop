@@ -290,6 +290,7 @@ export default function AdminInstance() {
                         )
                       )
                     }
+                    idPrefix={`element-${index}`}
                   />
                   {mediaField ? (
                     <MediaUpload

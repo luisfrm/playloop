@@ -1,12 +1,6 @@
 import { expect, test } from "@playwright/test"
 
-import {
-  correctLabelFor,
-  item,
-  loginAsOperator,
-  publishGame,
-  setPlayerName,
-} from "./helpers"
+import { item, loginAsOperator, publishGame, setPlayerName } from "./helpers"
 
 const ITEMS = [
   item(1, "Alfa"),
@@ -14,46 +8,34 @@ const ITEMS = [
   item(3, "Charlie"),
   item(4, "Delta"),
 ]
+// Bravo and Delta are misses; Alfa and Charlie are the targets.
+const FALSE = [1, 3]
 
-test("a player answers rounds and ends up in the ranking", async ({ page }) => {
+test("a player marks the whole board and lands in the ranking", async ({
+  page,
+}) => {
   await loginAsOperator(page)
   await publishGame(page, {
     title: "Partida e2e",
     slug: "partida-e2e",
     items: ITEMS,
+    falseIndexes: FALSE,
   })
 
   await page.goto("/game/partida-e2e")
   await setPlayerName(page, "Ana")
   await page.getByRole("button", { name: "Empezar" }).click()
 
-  // The prompt image tells us which item is on screen, so right and wrong
-  // answers are both deliberate.
-  const correct = await correctLabelFor(page, ITEMS)
-  await page.getByRole("button", { name: correct, exact: true }).click()
-  await expect(page.getByText("Correcto", { exact: true })).toBeVisible()
+  await expect(page.getByText("0 de 2")).toBeVisible()
 
-  await page.getByRole("button", { name: "Siguiente" }).click()
+  // Every pick resolves inline: no feedback screen, the board just locks.
+  await page.getByRole("button", { name: "Alfa" }).click()
+  await expect(page.getByText("1 de 2")).toBeVisible()
+  await expect(page.getByRole("button", { name: "Alfa" })).toBeDisabled()
 
-  // Keep losing until the lives run out, which is what finishes the game.
+  await page.getByRole("button", { name: "Charlie" }).click()
+
   const ranking = page.getByRole("link", { name: "Ver ranking" })
-
-  for (let round = 0; round < 6 && !(await ranking.isVisible()); round += 1) {
-    // The prompt changes every round and a round only offers the items not
-    // asked yet, so the wrong answer is picked from what is on screen.
-    const correctNow = await correctLabelFor(page, ITEMS)
-    await page
-      .locator("main")
-      .getByRole("button")
-      .filter({ hasNotText: correctNow })
-      .first()
-      .click()
-    await expect(page.getByText("Fallaste", { exact: true })).toBeVisible()
-
-    const next = page.getByRole("button", { name: "Siguiente" })
-    if (await next.isVisible()) await next.click()
-  }
-
   await expect(ranking).toBeVisible()
   await ranking.click()
 
@@ -63,12 +45,37 @@ test("a player answers rounds and ends up in the ranking", async ({ page }) => {
   ).toBeVisible()
 })
 
+test("a miss costs a life and losing ends the run without the bonus", async ({
+  page,
+}) => {
+  await loginAsOperator(page)
+  await publishGame(page, {
+    title: "Derrota e2e",
+    slug: "derrota-e2e",
+    items: ITEMS,
+    falseIndexes: FALSE,
+    lives: 1,
+  })
+
+  await page.goto("/game/derrota-e2e")
+  await setPlayerName(page, "Bea")
+  await page.getByRole("button", { name: "Empezar" }).click()
+
+  await page.getByRole("button", { name: "Bravo" }).click()
+
+  await expect(page.getByText("Fallaste", { exact: true })).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: "Jugar otra vez" })
+  ).toBeVisible()
+})
+
 test("an unfinished game never reached the ranking", async ({ page }) => {
   await loginAsOperator(page)
   await publishGame(page, {
     title: "Ranking vacío e2e",
     slug: "ranking-vacio-e2e",
     items: ITEMS,
+    falseIndexes: FALSE,
   })
 
   await page.goto("/game/ranking-vacio-e2e")
@@ -78,42 +85,4 @@ test("an unfinished game never reached the ranking", async ({ page }) => {
 
   await page.goto("/ranking/ranking-vacio-e2e")
   await expect(page.getByText("Todavía no hay puntuaciones.")).toBeVisible()
-})
-
-test("the expert mode offers the dictionary instead of options", async ({
-  page,
-}) => {
-  await loginAsOperator(page)
-  await publishGame(page, {
-    title: "Modo experto e2e",
-    slug: "modo-experto-e2e",
-    items: ITEMS,
-  })
-
-  // Expert mode is enabled in the panel, which needs the dictionary loaded.
-  await page.goto("/admin")
-  await page
-    .locator("li")
-    .filter({ hasText: "Modo experto e2e" })
-    .first()
-    .getByRole("link")
-    .click()
-  await page.getByLabel("Modo experto").check()
-  await page.getByRole("button", { name: "Guardar ajustes" }).click()
-  await expect(page.getByLabel("Modo experto")).toBeChecked()
-
-  await page.goto("/game/modo-experto-e2e")
-  await setPlayerName(page, "Ce")
-  await page.getByRole("button", { name: "Experto" }).click()
-  await page.getByRole("button", { name: "Empezar" }).click()
-
-  await expect(
-    page.getByLabel("Busca la respuesta en el diccionario")
-  ).toBeVisible()
-
-  const correct = await correctLabelFor(page, ITEMS)
-  // The dictionary offers the answer as listbox options, not as the classic
-  // answer buttons, so the role is what tells the two panels apart.
-  await page.getByRole("option", { name: correct, exact: true }).click()
-  await expect(page.getByText("Correcto", { exact: true })).toBeVisible()
 })

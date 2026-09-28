@@ -6,6 +6,12 @@ export type FieldInputProps = {
   field: FieldDescriptor
   value: unknown
   onChange: (value: unknown) => void
+  /**
+   * Prefix for the control id. Repeated forms (one per content item) pass
+   * their own, so labels keep pointing at their own control instead of all
+   * landing on the first duplicate id.
+   */
+  idPrefix?: string
 }
 
 function asText(value: unknown): string {
@@ -18,8 +24,13 @@ function asText(value: unknown): string {
  * One control per descriptor kind. The panel never imports a game type's
  * schema — it renders whatever shape came back from `describeObject`.
  */
-export function FieldInput({ field, value, onChange }: FieldInputProps) {
-  const id = `field-${field.name.replace(/\./g, "-")}`
+export function FieldInput({
+  field,
+  value,
+  onChange,
+  idPrefix,
+}: FieldInputProps) {
+  const id = `${idPrefix ?? "field"}-${field.name.replace(/\./g, "-")}`
   const describedBy = field.description ? `${id}-hint` : undefined
 
   const label = (

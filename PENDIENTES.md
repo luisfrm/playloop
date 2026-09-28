@@ -114,3 +114,11 @@ Lista de lo que falta por completar. Revisada el 2026-09-27 con
   faltaban los tokens de acento que ya usaban `Badge`, `game-card` y
   `character-mark` (`--accent-2`, `--accent-3`, `--mint`, `--lavender`), así que
   no pintaban: definidos en `:root`, `.dark` y `@theme`.
+- [x] **18. Tablero multiselección.** `true_false` deja de ser pregunta con
+  opciones: tablero único con `isTrue` ("Es verdadero"), feedback inmediato
+  por casilla, vidas configurables, victoria con +2 y timeout = derrota. Salas
+  reescritas a turnos estrictos con orden fijo, puntuación por supervivencia
+  (+1 por ronda adicional, R−1 al eliminado en ronda R), fin al arrancar ronda
+  con ≤1 en pie o al completar el tablero, y revancha en la misma sala con
+  marcador por partida y acumulado global. Sin modo experto (la infra de
+  diccionario queda); `optionCount` sale de los ajustes base.

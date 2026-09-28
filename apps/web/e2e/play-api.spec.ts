@@ -11,7 +11,12 @@ const ITEMS = [
 
 test("the play endpoint refuses what it should", async ({ page, request }) => {
   await loginAsOperator(page)
-  await publishGame(page, { title: "API e2e", slug: "api-e2e", items: ITEMS })
+  await publishGame(page, {
+    title: "API e2e",
+    slug: "api-e2e",
+    items: ITEMS,
+    falseIndexes: [1, 3],
+  })
 
   const missingPlayer = await request.post("/api/play", {
     data: { action: "start", slug: "api-e2e" },
@@ -56,6 +61,7 @@ test("a blocked name never starts a game", async ({ page, request }) => {
     title: "Moderación e2e",
     slug: "moderacion-e2e",
     items: ITEMS,
+    falseIndexes: [1, 3],
   })
 
   await page.goto("/admin/moderation")
@@ -92,6 +98,7 @@ test("a session belongs to exactly one player id", async ({
     title: "Sesión e2e",
     slug: "sesion-e2e",
     items: ITEMS,
+    falseIndexes: [1, 3],
   })
 
   const started = await request.post("/api/play", {
@@ -105,17 +112,17 @@ test("a session belongs to exactly one player id", async ({
   expect(started.status()).toBe(200)
 
   const payload = (await started.json()) as {
-    view: { sessionId: string; options: { id: string }[] }
+    view: { sessionId: string; board: { id: string }[] }
   }
   const sessionId = payload.view.sessionId
   expect(sessionId).toBeTruthy()
-  expect(payload.view.options.length).toBeGreaterThan(1)
+  expect(payload.view.board.length).toBeGreaterThan(1)
 
   const hijack = await request.post("/api/play", {
     data: {
       action: "answer",
       sessionId,
-      answerId: payload.view.options[0]!.id,
+      answerId: payload.view.board[0]!.id,
       playerId: "otro",
       playerName: "Otro",
     },
@@ -126,7 +133,7 @@ test("a session belongs to exactly one player id", async ({
     data: {
       action: "answer",
       sessionId,
-      answerId: payload.view.options[0]!.id,
+      answerId: payload.view.board[0]!.id,
       playerId: "dueña",
       playerName: "Dueña",
     },
@@ -139,7 +146,12 @@ test("the session payload never carries the answer", async ({
   request,
 }) => {
   await loginAsOperator(page)
-  await publishGame(page, { title: "Fuga e2e", slug: "fuga-e2e", items: ITEMS })
+  await publishGame(page, {
+    title: "Fuga e2e",
+    slug: "fuga-e2e",
+    items: ITEMS,
+    falseIndexes: [1, 3],
+  })
 
   const started = await request.post("/api/play", {
     data: {
@@ -151,7 +163,8 @@ test("the session payload never carries the answer", async ({
   })
 
   const raw = await started.text()
-  // The id of the correct option is the answer; the browser must never see it.
+  // The target set is the answer; the browser must never see it.
+  expect(raw).not.toContain("trueIds")
+  expect(raw).not.toContain("correctIds")
   expect(raw).not.toContain("answerOptionId")
-  expect(raw).not.toContain("isCorrect")
 })
